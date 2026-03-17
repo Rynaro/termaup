@@ -65,34 +65,9 @@ Workspace (Team) → Space → Folder → List → Task
 { "err": "error message", "ECODE": "ERROR_CODE" }
 ```
 
-## Rust Conventions
+## Skills
 
-### General
-- Rust edition: 2024
-- All public items MUST have doc comments (`///`)
-- Use `thiserror` for library error types, `anyhow` for binary error handling
-- Use `tokio` as the async runtime everywhere
-- Prefer `reqwest` with `rustls-tls` (no OpenSSL dependency)
-- All structs that cross serialization boundaries derive `Debug, Clone, Serialize, Deserialize`
-- Use `#[serde(rename_all = "snake_case")]` as default, with per-field `#[serde(rename = "...")]` or `#[serde(alias = "...")]` for ClickUp's mixed-case API responses
-- Never use `unwrap()` in library or binary code — use `?` operator or `unwrap_or_default()`
-- `unwrap()` is ONLY acceptable in test code
-
-### Error Handling
-- `clickup-api` defines `ClickUpError` enum with `thiserror`
-- `clickup-api` exports `pub type Result<T> = std::result::Result<T, ClickUpError>`
-- Binary crates use `anyhow::Result` at the top level and convert from `ClickUpError`
-
-### Async Patterns
-- All API calls are async
-- TUI uses `tokio::sync::mpsc` channels for async data loading → UI event communication
-- Never block the main thread in the TUI — spawn data fetches on `tokio::spawn`
-
-### Testing
-- Use `wiremock` for HTTP mocking in API client tests
-- Use `insta` for snapshot testing in CLI output tests
-- Use ratatui's `TestBackend` for TUI widget rendering tests
-- All test fixtures go in `tests/fixtures/` directories
+Skill definitions for each development workstream are in `.github/skills/`. Copilot loads them automatically when relevant to the current task. See `SKILLS.md` for the dependency graph and index.
 
 ## Dependency Stack
 

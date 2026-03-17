@@ -1,0 +1,140 @@
+{
+  "tasks": [
+    {
+      "id": "abc123",
+      "custom_id": null,
+      "name": "Example Task",
+      "description": "Task description in plain text",
+      "text_content": "Task description in plain text",
+      "markdown_description": "# Task\n\nThis is **bold** and *italic*\n\n- Item 1\n- Item 2",
+      "status": {
+        "id": "st_1",
+        "status": "in progress",
+        "color": "#4194f6",
+        "type": "custom",
+        "orderindex": 1
+      },
+      "orderindex": "1.00000000000000000000",
+      "date_created": "1679012345000",
+      "date_updated": "1679012400000",
+      "date_closed": null,
+      "date_done": null,
+      "creator": {
+        "id": 123,
+        "username": "John Doe",
+        "email": "john@example.com",
+        "color": "#7B68EE",
+        "profilePicture": null,
+        "initials": "JD"
+      },
+      "assignees": [
+        {
+          "id": 456,
+          "username": "Jane Smith",
+          "email": "jane@example.com",
+          "color": "#FF6900",
+          "profilePicture": null,
+          "initials": "JS"
+        }
+      ],
+      "priority": {
+        "id": "2",
+        "priority": "high",
+        "color": "#ffcc00",
+        "orderindex": "2"
+      },
+      "due_date": "1679100000000",
+      "start_date": null,
+      "points": 5.0,
+      "time_estimate": 3600000,
+      "tags": [
+        {
+          "name": "bug",
+          "tag_fg": "#ffffff",
+          "tag_bg": "#ff0000"
+        }
+      ],
+      "list": {
+        "id": "list1",
+        "name": "Sprint 1",
+        "access": true
+      },
+      "folder": {
+        "id": "fold1",
+        "name": "Development",
+        "hidden": false,
+        "access": true
+      },
+      "space": {
+        "id": "sp1"
+      },
+      "url": "https://app.clickup.com/t/abc123",
+      "parent": null,
+      "subtasks": [],
+      "custom_fields": [
+        {
+          "id": "cf1",
+          "name": "Story Points",
+          "type": "number",
+          "type_config": {},
+          "value": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "def456",
+      "custom_id": null,
+      "name": "Another Task",
+      "description": "",
+      "text_content": "",
+      "markdown_description": "",
+      "status": {
+        "id": "st_2",
+        "status": "to do",
+        "color": "#d3d3d3",
+        "type": "open",
+        "orderindex": 0
+      },
+      "orderindex": "2.00000000000000000000",
+      "date_created": "1679012500000",
+      "date_updated": "1679012500000",
+      "date_closed": null,
+      "date_done": null,
+      "creator": {
+        "id": 123,
+        "username": "John Doe",
+        "email": "john@example.com",
+        "color": "#7B68EE",
+        "profilePicture": null,
+        "initials": "JD"
+      },
+      "assignees": [],
+      "priority": null,
+      "due_date": null,
+      "start_date": null,
+      "points": null,
+      "time_estimate": null,
+      "tags": [],
+      "list": {
+        "id": "list1",
+        "name": "Sprint 1",
+        "access": true
+      },
+      "folder": {
+        "id": "fold1",
+        "name": "Development",
+        "hidden": false,
+        "access": true
+      },
+      "space": {
+        "id": "sp1"
+      },
+      "url": "https://app.clickup.com/t/def456",
+      "parent": null,
+      "subtasks": [],
+      "custom_fields": []
+    }
+  ],
+  "last_page": true
+}

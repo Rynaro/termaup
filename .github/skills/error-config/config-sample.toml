@@ -1,0 +1,9 @@
+# clickup-rs configuration
+# Location: ~/.config/clickup-rs/config.toml
+
+# Default workspace ID to use when no --workspace flag is provided
+# default_workspace_id = "1234567"
+
+# Log level filter (trace, debug, info, warn, error)
+# Also configurable via CLICKUP_LOG environment variable
+# log_level = "info"

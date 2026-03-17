@@ -1,0 +1,34 @@
+{
+  "teams": [
+    {
+      "id": "1234",
+      "name": "My Workspace",
+      "color": "#40BC86",
+      "avatar": "https://attachments.clickup.com/team_avatars/1234.jpg",
+      "members": [
+        {
+          "user": {
+            "id": 123,
+            "username": "John Doe",
+            "email": "john@example.com",
+            "color": "#7B68EE",
+            "profilePicture": null,
+            "initials": "JD",
+            "role": 1
+          }
+        },
+        {
+          "user": {
+            "id": 456,
+            "username": "Jane Smith",
+            "email": "jane@example.com",
+            "color": "#FF6900",
+            "profilePicture": null,
+            "initials": "JS",
+            "role": 2
+          }
+        }
+      ]
+    }
+  ]
+}

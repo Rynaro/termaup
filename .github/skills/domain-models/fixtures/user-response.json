@@ -1,0 +1,13 @@
+{
+  "user": {
+    "id": 123,
+    "username": "John Doe",
+    "email": "john@example.com",
+    "color": "#7B68EE",
+    "profilePicture": "https://attachments.clickup.com/profilePictures/123_abc.jpg",
+    "initials": "JD",
+    "week_start_day": 1,
+    "global_font_support": false,
+    "timezone": "America/New_York"
+  }
+}
