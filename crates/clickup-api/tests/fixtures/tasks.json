@@ -1,0 +1,86 @@
+{
+  "tasks": [
+    {
+      "id": "task_abc123",
+      "custom_id": null,
+      "name": "Implement user authentication",
+      "description": "Add JWT-based auth flow",
+      "text_content": "Add JWT-based auth flow",
+      "status": { "status": "In Progress", "color": "#4194f6", "type": "custom" },
+      "orderindex": "1.00",
+      "date_created": "1710600000000",
+      "date_updated": "1710686400000",
+      "date_closed": null,
+      "date_done": null,
+      "creator": {
+        "id": 12345678,
+        "username": "John Doe",
+        "email": "john@example.com",
+        "color": "#7B68EE",
+        "profilePicture": null,
+        "initials": "JD"
+      },
+      "assignees": [
+        {
+          "id": 12345678,
+          "username": "John Doe",
+          "email": "john@example.com",
+          "color": "#7B68EE",
+          "profilePicture": null,
+          "initials": "JD"
+        }
+      ],
+      "priority": { "id": "2", "priority": "high", "color": "#ffcc00" },
+      "due_date": "1711209600000",
+      "start_date": "1710600000000",
+      "tags": [
+        { "name": "backend", "tag_fg": "#ffffff", "tag_bg": "#536cfe" }
+      ],
+      "list": { "id": "list_001", "name": "Sprint 42" },
+      "folder": { "id": "folder_001", "name": "Backend" },
+      "space": { "id": "space_001" },
+      "url": "https://app.clickup.com/t/task_abc123",
+      "markdown_description": "# Authentication\n\nImplement JWT-based authentication.\n\n## Requirements\n\n- Login endpoint\n- Token refresh\n- **Secure** token storage\n\n```rust\nfn authenticate(token: &str) -> Result<User> {\n    // TODO\n}\n```\n",
+      "parent": null,
+      "subtasks": [],
+      "custom_fields": [
+        { "id": "cf_001", "name": "Story Points", "type": "number", "value": 5 }
+      ]
+    },
+    {
+      "id": "task_def456",
+      "custom_id": "ENG-42",
+      "name": "Fix login page CSS",
+      "description": null,
+      "text_content": null,
+      "status": { "status": "Open", "color": "#d3d3d3", "type": "open" },
+      "orderindex": "2.00",
+      "date_created": "1710700000000",
+      "date_updated": "1710700000000",
+      "date_closed": null,
+      "date_done": null,
+      "creator": {
+        "id": 87654321,
+        "username": "Jane Smith",
+        "email": "jane@example.com",
+        "color": "#e50000",
+        "profilePicture": null,
+        "initials": "JS"
+      },
+      "assignees": [],
+      "priority": null,
+      "due_date": null,
+      "start_date": null,
+      "tags": [],
+      "list": { "id": "list_001", "name": "Sprint 42" },
+      "folder": { "id": "folder_001", "name": "Backend" },
+      "space": { "id": "space_001" },
+      "url": "https://app.clickup.com/t/task_def456",
+      "markdown_description": null,
+      "parent": null,
+      "subtasks": null,
+      "custom_fields": null
+    }
+  ],
+  "last_page": true
+}

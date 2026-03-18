@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# bin/termaup — Launch the ClickUp TUI via Docker.
+#
+# Usage:
+#   bin/termaup
+#
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+exec docker compose run --rm clickup-tui

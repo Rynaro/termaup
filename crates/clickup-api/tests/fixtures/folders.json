@@ -1,0 +1,24 @@
+{
+  "folders": [
+    {
+      "id": "folder_001",
+      "name": "Backend",
+      "orderindex": 0,
+      "hidden": false,
+      "space": { "id": "space_001", "name": "Engineering" },
+      "task_count": "15",
+      "lists": [
+        {
+          "id": "list_001",
+          "name": "Sprint 42",
+          "orderindex": 0,
+          "status": null,
+          "content": "Current sprint tasks",
+          "task_count": "8",
+          "space": { "id": "space_001" },
+          "folder": { "id": "folder_001", "name": "Backend", "hidden": false }
+        }
+      ]
+    }
+  ]
+}

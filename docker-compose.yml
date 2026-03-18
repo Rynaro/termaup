@@ -1,0 +1,19 @@
+services:
+  clickup:
+    build: .
+    environment:
+      - CLICKUP_LOG=info
+    volumes:
+      - ~/.config/clickup-rs:/home/appuser/.config/clickup-rs
+    stdin_open: true
+    tty: true
+
+  clickup-tui:
+    build: .
+    entrypoint: ["clickup-tui"]
+    environment:
+      - CLICKUP_LOG=info
+    volumes:
+      - ~/.config/clickup-rs:/home/appuser/.config/clickup-rs
+    stdin_open: true
+    tty: true

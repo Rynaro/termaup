@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# bin/setup — One-time project setup.
+# Builds the Docker image and prepares the config directory.
+#
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+CONFIG_DIR="${HOME}/.config/clickup-rs"
+
+echo "==> Setting up termaup…"
+
+# Ensure config directory exists so the volume mount works.
+if [ ! -d "$CONFIG_DIR" ]; then
+  mkdir -p "$CONFIG_DIR"
+  echo "    Created $CONFIG_DIR"
+fi
+
+# Build the Docker image.
+echo "==> Building Docker image…"
+docker compose build
+
+echo ""
+echo "✓ Setup complete!"
+echo ""
+echo "Next steps:"
+echo "  1. Authenticate:  bin/clickup auth login"
+echo "  2. Browse spaces:  bin/clickup space list"
+echo "  3. Launch TUI:     bin/termaup"
+echo ""
+echo "Run bin/clickup --help for all commands."

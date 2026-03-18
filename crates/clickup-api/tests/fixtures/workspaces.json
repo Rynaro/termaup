@@ -1,0 +1,32 @@
+{
+  "teams": [
+    {
+      "id": "team_001",
+      "name": "Acme Corp",
+      "color": "#536cfe",
+      "avatar": null,
+      "members": [
+        {
+          "user": {
+            "id": 12345678,
+            "username": "John Doe",
+            "email": "john@example.com",
+            "color": "#7B68EE",
+            "profilePicture": null,
+            "initials": "JD"
+          }
+        },
+        {
+          "user": {
+            "id": 87654321,
+            "username": "Jane Smith",
+            "email": "jane@example.com",
+            "color": "#e50000",
+            "profilePicture": null,
+            "initials": "JS"
+          }
+        }
+      ]
+    }
+  ]
+}

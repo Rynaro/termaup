@@ -1,0 +1,30 @@
+{
+  "comments": [
+    {
+      "id": "comment_001",
+      "comment_text": "Should we use RS256 or HS256 for JWT signing?",
+      "user": {
+        "id": 12345678,
+        "username": "John Doe",
+        "email": "john@example.com",
+        "color": "#7B68EE",
+        "profilePicture": null,
+        "initials": "JD"
+      },
+      "date": "1710620000000"
+    },
+    {
+      "id": "comment_002",
+      "comment_text": "Let's go with RS256 for better security. We can rotate keys more easily.",
+      "user": {
+        "id": 87654321,
+        "username": "Jane Smith",
+        "email": "jane@example.com",
+        "color": "#e50000",
+        "profilePicture": null,
+        "initials": "JS"
+      },
+      "date": "1710625000000"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#
+# bin/clickup — Run the ClickUp CLI via Docker.
+#
+# Usage:
+#   bin/clickup auth login
+#   bin/clickup space list
+#   bin/clickup task get TASK_ID --format json
+#   bin/clickup --help
+#
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+exec docker compose run --rm clickup "$@"

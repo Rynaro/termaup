@@ -1,0 +1,24 @@
+{
+  "lists": [
+    {
+      "id": "list_002",
+      "name": "Backlog",
+      "orderindex": 0,
+      "status": null,
+      "content": null,
+      "task_count": "23",
+      "space": { "id": "space_001" },
+      "folder": { "id": "0", "name": null, "hidden": null }
+    },
+    {
+      "id": "list_003",
+      "name": "Bug Fixes",
+      "orderindex": 1,
+      "status": null,
+      "content": "Tracked bugs",
+      "task_count": "5",
+      "space": { "id": "space_001" },
+      "folder": { "id": "0", "name": null, "hidden": null }
+    }
+  ]
+}

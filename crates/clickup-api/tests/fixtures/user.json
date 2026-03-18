@@ -1,0 +1,10 @@
+{
+  "user": {
+    "id": 12345678,
+    "username": "John Doe",
+    "email": "john@example.com",
+    "color": "#7B68EE",
+    "profilePicture": "https://example.com/avatar.jpg",
+    "initials": "JD"
+  }
+}

@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+#
+# bin/dev — Development helper for contributors.
+#
+# Usage:
+#   bin/dev build          Build all crates
+#   bin/dev test           Run all tests
+#   bin/dev lint           Run clippy (zero warnings)
+#   bin/dev fmt            Format code
+#   bin/dev check          Format check + lint + test
+#   bin/dev release        Build release binaries
+#   bin/dev clean          Remove build artifacts
+#   bin/dev install        Install both binaries locally
+#   bin/dev install-cli    Install CLI binary
+#   bin/dev install-tui    Install TUI binary
+#
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+has_cargo() {
+  command -v cargo &>/dev/null
+}
+
+usage() {
+  echo "Usage: bin/dev <command>"
+  echo ""
+  echo "Commands:"
+  echo "  build        Build all workspace crates"
+  echo "  test         Run all tests"
+  echo "  lint         Run clippy with -D warnings"
+  echo "  fmt          Format all code"
+  echo "  check        Format check + lint + test"
+  echo "  release      Build release binaries"
+  echo "  clean        Remove build artifacts"
+  echo "  install      Install both binaries"
+  echo "  install-cli  Install CLI binary"
+  echo "  install-tui  Install TUI binary"
+}
+
+if [ $# -eq 0 ]; then
+  usage
+  exit 1
+fi
+
+cmd="$1"
+shift
+
+case "$cmd" in
+  build)
+    if has_cargo; then
+      cargo build --workspace "$@"
+    else
+      echo "==> cargo not found, building via Docker…"
+      docker compose build
+    fi
+    ;;
+  test)
+    if has_cargo; then
+      cargo test --workspace "$@"
+    else
+      echo "==> cargo not found, running tests via Docker…"
+      docker compose run --rm --entrypoint "" clickup cargo test --workspace "$@"
+    fi
+    ;;
+  lint)
+    if has_cargo; then
+      cargo clippy --workspace -- -D warnings "$@"
+    else
+      echo "==> cargo not found, linting via Docker…"
+      docker compose run --rm --entrypoint "" clickup cargo clippy --workspace -- -D warnings "$@"
+    fi
+    ;;
+  fmt)
+    if has_cargo; then
+      cargo fmt --all "$@"
+    else
+      echo "==> cargo not found, formatting via Docker…"
+      docker compose run --rm --entrypoint "" clickup cargo fmt --all "$@"
+    fi
+    ;;
+  check)
+    echo "==> Checking format…"
+    bin/dev fmt -- --check
+    echo "==> Linting…"
+    bin/dev lint
+    echo "==> Testing…"
+    bin/dev test
+    echo ""
+    echo "✓ All checks passed"
+    ;;
+  release)
+    if has_cargo; then
+      cargo build --workspace --release "$@"
+    else
+      echo "==> cargo not found, building release via Docker…"
+      docker compose build
+    fi
+    ;;
+  clean)
+    if has_cargo; then
+      cargo clean "$@"
+    else
+      echo "Nothing to clean (no local cargo target)."
+    fi
+    ;;
+  install)
+    bin/dev install-cli
+    bin/dev install-tui
+    ;;
+  install-cli)
+    if has_cargo; then
+      cargo install --path crates/clickup-cli "$@"
+    else
+      echo "✗ cargo is required for local install. Use bin/clickup for Docker usage."
+      exit 1
+    fi
+    ;;
+  install-tui)
+    if has_cargo; then
+      cargo install --path crates/clickup-tui "$@"
+    else
+      echo "✗ cargo is required for local install. Use bin/termaup for Docker usage."
+      exit 1
+    fi
+    ;;
+  *)
+    echo "Unknown command: $cmd"
+    echo ""
+    usage
+    exit 1
+    ;;
+esac

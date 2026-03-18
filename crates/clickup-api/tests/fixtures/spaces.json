@@ -1,0 +1,31 @@
+{
+  "spaces": [
+    {
+      "id": "space_001",
+      "name": "Engineering",
+      "private": false,
+      "color": "#40BC86",
+      "avatar": null,
+      "statuses": [
+        { "id": "st_1", "status": "Open", "color": "#d3d3d3", "type": "open", "orderindex": 0 },
+        { "id": "st_2", "status": "In Progress", "color": "#4194f6", "type": "custom", "orderindex": 1 },
+        { "id": "st_3", "status": "Done", "color": "#6bc950", "type": "closed", "orderindex": 2 }
+      ],
+      "multiple_assignees": true,
+      "features": { "due_dates": { "enabled": true } }
+    },
+    {
+      "id": "space_002",
+      "name": "Design",
+      "private": true,
+      "color": "#FF6900",
+      "avatar": null,
+      "statuses": [
+        { "id": "st_4", "status": "To Do", "color": "#d3d3d3", "type": "open", "orderindex": 0 },
+        { "id": "st_5", "status": "Complete", "color": "#6bc950", "type": "closed", "orderindex": 1 }
+      ],
+      "multiple_assignees": false,
+      "features": null
+    }
+  ]
+}

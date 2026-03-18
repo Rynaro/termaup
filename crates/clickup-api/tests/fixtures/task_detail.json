@@ -1,0 +1,84 @@
+{
+  "id": "task_abc123",
+  "custom_id": null,
+  "name": "Implement user authentication",
+  "description": "Add JWT-based auth flow",
+  "text_content": "Add JWT-based auth flow",
+  "status": { "status": "In Progress", "color": "#4194f6", "type": "custom" },
+  "orderindex": "1.00",
+  "date_created": "1710600000000",
+  "date_updated": "1710686400000",
+  "date_closed": null,
+  "date_done": null,
+  "creator": {
+    "id": 12345678,
+    "username": "John Doe",
+    "email": "john@example.com",
+    "color": "#7B68EE",
+    "profilePicture": null,
+    "initials": "JD"
+  },
+  "assignees": [
+    {
+      "id": 12345678,
+      "username": "John Doe",
+      "email": "john@example.com",
+      "color": "#7B68EE",
+      "profilePicture": null,
+      "initials": "JD"
+    }
+  ],
+  "priority": { "id": "2", "priority": "high", "color": "#ffcc00" },
+  "due_date": "1711209600000",
+  "start_date": "1710600000000",
+  "tags": [
+    { "name": "backend", "tag_fg": "#ffffff", "tag_bg": "#536cfe" },
+    { "name": "auth", "tag_fg": "#000000", "tag_bg": "#ff6900" }
+  ],
+  "list": { "id": "list_001", "name": "Sprint 42" },
+  "folder": { "id": "folder_001", "name": "Backend" },
+  "space": { "id": "space_001" },
+  "url": "https://app.clickup.com/t/task_abc123",
+  "markdown_description": "# Authentication\n\nImplement JWT-based authentication.\n\n## Requirements\n\n- Login endpoint\n- Token refresh\n- **Secure** token storage\n\n```rust\nfn authenticate(token: &str) -> Result<User> {\n    // TODO\n}\n```\n",
+  "parent": null,
+  "subtasks": [
+    {
+      "id": "subtask_001",
+      "custom_id": null,
+      "name": "Design auth schema",
+      "description": null,
+      "text_content": null,
+      "status": { "status": "Done", "color": "#6bc950", "type": "closed" },
+      "orderindex": "0.50",
+      "date_created": "1710600000000",
+      "date_updated": "1710650000000",
+      "date_closed": "1710650000000",
+      "date_done": "1710650000000",
+      "creator": {
+        "id": 12345678,
+        "username": "John Doe",
+        "email": "john@example.com",
+        "color": "#7B68EE",
+        "profilePicture": null,
+        "initials": "JD"
+      },
+      "assignees": [],
+      "priority": null,
+      "due_date": null,
+      "start_date": null,
+      "tags": [],
+      "list": { "id": "list_001", "name": "Sprint 42" },
+      "folder": { "id": "folder_001", "name": "Backend" },
+      "space": { "id": "space_001" },
+      "url": "https://app.clickup.com/t/subtask_001",
+      "markdown_description": null,
+      "parent": "task_abc123",
+      "subtasks": null,
+      "custom_fields": null
+    }
+  ],
+  "custom_fields": [
+    { "id": "cf_001", "name": "Story Points", "type": "number", "value": 5 },
+    { "id": "cf_002", "name": "Component", "type": "drop_down", "value": "auth" }
+  ]
+}

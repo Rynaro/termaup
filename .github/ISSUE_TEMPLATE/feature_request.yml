@@ -1,0 +1,52 @@
+name: Feature Request
+description: Suggest a new feature for termaup
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! Please describe your idea below.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the feature you'd like.
+      placeholder: I would like to be able to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Why would this feature be useful? What problem does it solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How do you think this could be implemented?
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you've considered?
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of termaup does this relate to?
+      options:
+        - CLI (clickup-cli)
+        - TUI (clickup-tui)
+        - API Client (clickup-api)
+        - Documentation
+        - Other
+    validations:
+      required: true
