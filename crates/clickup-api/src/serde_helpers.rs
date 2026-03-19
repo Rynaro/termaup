@@ -168,6 +168,58 @@ where
     }
 }
 
+/// Deserializes a boolean that may arrive as an integer (`0`/`1`).
+///
+/// ClickUp returns `"resolved": 1` instead of `true` on checklist items.
+pub fn deserialize_bool_or_int<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct BoolOrInt;
+
+    impl<'de> de::Visitor<'de> for BoolOrInt {
+        type Value = bool;
+
+        fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            f.write_str("a boolean or an integer (0/1)")
+        }
+
+        fn visit_bool<E: de::Error>(self, v: bool) -> Result<Self::Value, E> {
+            Ok(v)
+        }
+
+        fn visit_i64<E: de::Error>(self, v: i64) -> Result<Self::Value, E> {
+            Ok(v != 0)
+        }
+
+        fn visit_u64<E: de::Error>(self, v: u64) -> Result<Self::Value, E> {
+            Ok(v != 0)
+        }
+    }
+
+    deserializer.deserialize_any(BoolOrInt)
+}
+
+/// Deserializes an optional boolean that may arrive as an integer (`0`/`1`) or `null`.
+pub fn deserialize_option_bool_or_int<'de, D>(
+    deserializer: D,
+) -> Result<Option<bool>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match &value {
+        serde_json::Value::Null => Ok(None),
+        serde_json::Value::Bool(b) => Ok(Some(*b)),
+        serde_json::Value::Number(n) => {
+            Ok(Some(n.as_i64().map(|v| v != 0).unwrap_or(false)))
+        }
+        _ => Err(de::Error::custom(format!(
+            "expected bool or integer, got {value}"
+        ))),
+    }
+}
+
 /// Deserializes a value that may be `null` or absent as `Default::default()`.
 ///
 /// `#[serde(default)]` only handles absent fields. This helper also handles
@@ -402,5 +454,63 @@ mod tests {
         }
         let v: T = serde_json::from_str(r#"{"items": ["a", "b"]}"#).unwrap();
         assert_eq!(v.items, vec!["a", "b"]);
+    }
+
+    #[derive(Deserialize)]
+    struct TestBoolOrInt {
+        #[serde(deserialize_with = "super::deserialize_bool_or_int")]
+        value: bool,
+    }
+
+    #[test]
+    fn test_bool_or_int_from_true() {
+        let v: TestBoolOrInt = serde_json::from_str(r#"{"value":true}"#).unwrap();
+        assert!(v.value);
+    }
+
+    #[test]
+    fn test_bool_or_int_from_1() {
+        let v: TestBoolOrInt = serde_json::from_str(r#"{"value":1}"#).unwrap();
+        assert!(v.value);
+    }
+
+    #[test]
+    fn test_bool_or_int_from_0() {
+        let v: TestBoolOrInt = serde_json::from_str(r#"{"value":0}"#).unwrap();
+        assert!(!v.value);
+    }
+
+    #[test]
+    fn test_bool_or_int_from_false() {
+        let v: TestBoolOrInt = serde_json::from_str(r#"{"value":false}"#).unwrap();
+        assert!(!v.value);
+    }
+
+    #[derive(Deserialize)]
+    struct TestOptionBoolOrInt {
+        #[serde(
+            default,
+            deserialize_with = "super::deserialize_option_bool_or_int"
+        )]
+        value: Option<bool>,
+    }
+
+    #[test]
+    fn test_option_bool_or_int_from_1() {
+        let v: TestOptionBoolOrInt = serde_json::from_str(r#"{"value":1}"#).unwrap();
+        assert_eq!(v.value, Some(true));
+    }
+
+    #[test]
+    fn test_option_bool_or_int_from_null() {
+        let v: TestOptionBoolOrInt =
+            serde_json::from_str(r#"{"value":null}"#).unwrap();
+        assert_eq!(v.value, None);
+    }
+
+    #[test]
+    fn test_option_bool_or_int_absent() {
+        let v: TestOptionBoolOrInt = serde_json::from_str(r#"{}"#).unwrap();
+        assert_eq!(v.value, None);
     }
 }

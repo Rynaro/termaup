@@ -12,7 +12,10 @@ pub struct Checklist {
     /// Checklist name.
     pub name: String,
     /// Whether the entire checklist is resolved.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_option_bool_or_int"
+    )]
     pub resolved: Option<bool>,
     /// Items in the checklist.
     #[serde(
@@ -40,7 +43,7 @@ pub struct ChecklistItem {
     /// Item name / description.
     pub name: String,
     /// Whether this item is resolved (checked).
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::serde_helpers::deserialize_bool_or_int")]
     pub resolved: bool,
     /// User assigned to this item, if any.
     #[serde(default)]
@@ -70,7 +73,7 @@ mod tests {
                 {
                     "id": "item_1",
                     "name": "Write unit tests",
-                    "resolved": true,
+                    "resolved": 1,
                     "assignee": {
                         "id": 42,
                         "username": "alice",
@@ -82,7 +85,7 @@ mod tests {
                 {
                     "id": 200,
                     "name": "Run integration tests",
-                    "resolved": false,
+                    "resolved": 0,
                     "assignee": null,
                     "orderindex": 1,
                     "parent": null
