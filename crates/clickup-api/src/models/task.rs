@@ -39,7 +39,10 @@ pub struct Task {
     /// The user who created the task.
     pub creator: User,
     /// Assigned users.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_null_as_default"
+    )]
     pub assignees: Vec<User>,
     /// Task priority.
     #[serde(
@@ -54,7 +57,10 @@ pub struct Task {
     #[serde(default)]
     pub start_date: Option<String>,
     /// Tags attached to the task.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_null_as_default"
+    )]
     pub tags: Vec<Tag>,
     /// Parent list reference.
     pub list: TaskList,
@@ -78,13 +84,22 @@ pub struct Task {
     #[serde(default)]
     pub custom_fields: Option<Vec<CustomField>>,
     /// Checklists attached to the task.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_null_as_default"
+    )]
     pub checklists: Vec<super::checklist::Checklist>,
     /// Tasks linked to this task.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_null_as_default"
+    )]
     pub linked_tasks: Vec<super::linked_task::LinkedTask>,
     /// Task dependencies (blocking/waiting relationships).
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_null_as_default"
+    )]
     pub dependencies: Vec<super::linked_task::TaskDependency>,
     /// Estimated time for this task (milliseconds).
     #[serde(default)]
@@ -96,10 +111,16 @@ pub struct Task {
     )]
     pub time_spent: Option<u64>,
     /// Users watching this task.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_null_as_default"
+    )]
     pub watchers: Vec<User>,
     /// File attachments on this task.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_null_as_default"
+    )]
     pub attachments: Vec<Attachment>,
     /// Story points assigned to this task.
     #[serde(default)]
@@ -434,5 +455,44 @@ mod tests {
         let resp: TasksResponse = serde_json::from_value(json).expect("deserialize response");
         assert_eq!(resp.tasks.len(), 1);
         assert_eq!(resp.last_page, Some(true));
+    }
+
+    #[test]
+    fn test_deserialize_task_with_null_arrays() {
+        let json = serde_json::json!({
+            "id": "t_null",
+            "name": "Task with null arrays",
+            "status": {
+                "status": "open",
+                "color": "#ccc",
+                "type": "open"
+            },
+            "creator": {
+                "id": 1,
+                "username": "u",
+                "email": "u@x.com"
+            },
+            "list": { "id": "l1" },
+            "folder": { "id": "f1" },
+            "space": { "id": "s1" },
+            "assignees": null,
+            "tags": null,
+            "checklists": null,
+            "linked_tasks": null,
+            "dependencies": null,
+            "watchers": null,
+            "attachments": null,
+            "subtasks": null,
+            "custom_fields": null
+        });
+        let task: Task =
+            serde_json::from_value(json).expect("task with null arrays should deserialize");
+        assert!(task.assignees.is_empty());
+        assert!(task.tags.is_empty());
+        assert!(task.checklists.is_empty());
+        assert!(task.linked_tasks.is_empty());
+        assert!(task.dependencies.is_empty());
+        assert!(task.watchers.is_empty());
+        assert!(task.attachments.is_empty());
     }
 }

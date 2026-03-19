@@ -15,7 +15,10 @@ pub struct Checklist {
     #[serde(default)]
     pub resolved: Option<bool>,
     /// Items in the checklist.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_null_as_default"
+    )]
     pub items: Vec<ChecklistItem>,
     /// Display order.
     #[serde(default)]

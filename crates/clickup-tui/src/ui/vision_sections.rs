@@ -1,6 +1,6 @@
 use ratatui::Frame;
 use ratatui::layout::Rect;
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
 
@@ -200,7 +200,12 @@ fn render_header(name: &str, color: &str, count: usize, focused: bool) -> Line<'
 }
 
 fn render_task_row(app: &App, task_idx: usize, selected: bool) -> Line<'static> {
-    let task = &app.tasks[task_idx];
+    let Some(task) = app.tasks.get(task_idx) else {
+        return Line::from(Span::styled(
+            "  (stale reference)",
+            Style::default().fg(Color::DarkGray),
+        ));
+    };
     let style = if selected {
         THEME.selected_style()
     } else {

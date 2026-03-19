@@ -1,6 +1,6 @@
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
 
@@ -148,6 +148,7 @@ fn render_column(app: &App, frame: &mut Frame, area: Rect, group_idx: usize, is_
         .task_indices
         .iter()
         .enumerate()
+        .filter(|&(_, &idx)| idx < app.tasks.len())
         .skip(v_scroll)
         .take(visible_height)
         .map(|(item_idx, &task_idx)| {
@@ -160,7 +161,12 @@ fn render_column(app: &App, frame: &mut Frame, area: Rect, group_idx: usize, is_
 }
 
 fn render_card(app: &App, task_idx: usize, selected: bool, width: usize) -> Line<'static> {
-    let task = &app.tasks[task_idx];
+    let Some(task) = app.tasks.get(task_idx) else {
+        return Line::from(Span::styled(
+            "  (stale reference)",
+            Style::default().fg(Color::DarkGray),
+        ));
+    };
     let style = if selected {
         THEME.selected_style()
     } else {

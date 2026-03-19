@@ -84,6 +84,7 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
         .enumerate()
         .skip(scroll)
         .take(visible_height)
+        .filter(|&(_, &idx)| idx < app.tasks.len())
         .map(|(display_idx, &real_idx)| {
             let task = &app.tasks[real_idx];
             let selected = display_idx == app.selected_index;

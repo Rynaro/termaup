@@ -314,6 +314,12 @@ impl App {
         self.error_set_at = Some(Instant::now());
     }
 
+    /// Clears all task data and associated status groups.
+    pub fn clear_tasks(&mut self) {
+        self.tasks.clear();
+        self.status_groups.clear();
+    }
+
     /// Clears the error message.
     pub fn clear_error(&mut self) {
         self.error_message = None;

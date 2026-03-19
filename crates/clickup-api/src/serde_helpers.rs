@@ -168,6 +168,19 @@ where
     }
 }
 
+/// Deserializes a value that may be `null` or absent as `Default::default()`.
+///
+/// `#[serde(default)]` only handles absent fields. This helper also handles
+/// explicit `null` values, which ClickUp returns for empty arrays (e.g.
+/// `"checklists": null` instead of `[]`).
+pub fn deserialize_null_as_default<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+where
+    T: Default + Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
+}
+
 /// Deserializes a value that may be an object, `false`, or `null` into `Option<T>`.
 ///
 /// ClickUp returns `"priority": false` when no priority is set instead of `null`.
@@ -356,5 +369,38 @@ mod tests {
     fn test_maybe_false_absent() {
         let v: TestMaybeFalse = serde_json::from_str(r#"{}"#).unwrap();
         assert!(v.value.is_none(), "absent field should default to None");
+    }
+
+    #[test]
+    fn test_null_as_default_vec_null() {
+        #[derive(Deserialize)]
+        struct T {
+            #[serde(default, deserialize_with = "super::deserialize_null_as_default")]
+            items: Vec<String>,
+        }
+        let v: T = serde_json::from_str(r#"{"items": null}"#).unwrap();
+        assert!(v.items.is_empty(), "null should deserialize to empty vec");
+    }
+
+    #[test]
+    fn test_null_as_default_vec_absent() {
+        #[derive(Deserialize)]
+        struct T {
+            #[serde(default, deserialize_with = "super::deserialize_null_as_default")]
+            items: Vec<String>,
+        }
+        let v: T = serde_json::from_str(r#"{}"#).unwrap();
+        assert!(v.items.is_empty(), "absent should deserialize to empty vec");
+    }
+
+    #[test]
+    fn test_null_as_default_vec_present() {
+        #[derive(Deserialize)]
+        struct T {
+            #[serde(default, deserialize_with = "super::deserialize_null_as_default")]
+            items: Vec<String>,
+        }
+        let v: T = serde_json::from_str(r#"{"items": ["a", "b"]}"#).unwrap();
+        assert_eq!(v.items, vec!["a", "b"]);
     }
 }

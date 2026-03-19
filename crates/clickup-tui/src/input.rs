@@ -362,7 +362,7 @@ fn handle_task_list_view(
         KeyCode::Esc => {
             app.cancel_filter();
             app.pop_breadcrumb();
-            app.tasks.clear();
+            app.clear_tasks();
             app.current_list = None;
             app.selected_index = app.saved_content_index;
             app.reset_pagination();
@@ -450,7 +450,7 @@ fn handle_task_vision_view(
         KeyCode::Esc => {
             app.cancel_filter();
             app.pop_breadcrumb();
-            app.tasks.clear();
+            app.clear_tasks();
             app.current_list = None;
             app.selected_index = app.saved_content_index;
             app.reset_pagination();
