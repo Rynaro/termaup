@@ -1,6 +1,6 @@
 use std::fmt;
 
-use serde::{Deserializer, de};
+use serde::{Deserialize, Deserializer, de};
 
 /// Deserializes a value that may be either a string or a number into a `String`.
 ///
@@ -98,6 +98,18 @@ where
     deserializer.deserialize_option(OptStringOrNumber)
 }
 
+/// Deserializes a string that may be absent or `null`, defaulting to `""`.
+///
+/// Use with `#[serde(default, deserialize_with = "...")]` on `String` fields
+/// that the ClickUp API may omit or set to `null` (e.g. deactivated users).
+pub fn deserialize_string_or_null<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt: Option<String> = Option::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
+}
+
 /// Deserializes a value that may be a string or a number into an `i32`.
 ///
 /// Handles cases where the API returns `"0"` (string) or `0` (integer).
@@ -137,6 +149,40 @@ where
     }
 
     deserializer.deserialize_any(I32OrString)
+}
+
+/// Deserializes a time value that may be a number (ms) or `{"time": ms}` object, or null.
+///
+/// ClickUp returns time_spent as either a raw number or a wrapped object.
+pub fn deserialize_time_value<'de, D>(deserializer: D) -> Result<Option<u64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match &value {
+        serde_json::Value::Null => Ok(None),
+        serde_json::Value::Number(n) => Ok(n.as_u64()),
+        serde_json::Value::Object(obj) => Ok(obj.get("time").and_then(|v| v.as_u64())),
+        serde_json::Value::String(s) => Ok(s.parse::<u64>().ok()),
+        _ => Ok(None),
+    }
+}
+
+/// Deserializes a value that may be an object, `false`, or `null` into `Option<T>`.
+///
+/// ClickUp returns `"priority": false` when no priority is set instead of `null`.
+pub fn deserialize_maybe_false<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    T: serde::de::DeserializeOwned,
+    D: Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match &value {
+        serde_json::Value::Bool(false) | serde_json::Value::Null => Ok(None),
+        _ => serde_json::from_value(value)
+            .map(Some)
+            .map_err(de::Error::custom),
+    }
 }
 
 #[cfg(test)]
@@ -215,5 +261,100 @@ mod tests {
     fn test_i32_from_string() {
         let v: TestI32 = serde_json::from_str(r#"{"value":"6"}"#).unwrap();
         assert_eq!(v.value, 6);
+    }
+
+    #[derive(Deserialize)]
+    struct TestStringOrNull {
+        #[serde(default, deserialize_with = "deserialize_string_or_null")]
+        value: String,
+    }
+
+    #[test]
+    fn test_string_or_null_from_string() {
+        let v: TestStringOrNull = serde_json::from_str(r#"{"value":"hi"}"#).unwrap();
+        assert_eq!(v.value, "hi");
+    }
+
+    #[test]
+    fn test_string_or_null_from_null() {
+        let v: TestStringOrNull = serde_json::from_str(r#"{"value":null}"#).unwrap();
+        assert_eq!(v.value, "");
+    }
+
+    #[test]
+    fn test_string_or_null_absent() {
+        let v: TestStringOrNull = serde_json::from_str(r#"{}"#).unwrap();
+        assert_eq!(v.value, "");
+    }
+
+    #[derive(Deserialize)]
+    struct TestTimeValue {
+        #[serde(default, deserialize_with = "deserialize_time_value")]
+        value: Option<u64>,
+    }
+
+    #[test]
+    fn test_time_value_from_number() {
+        let v: TestTimeValue = serde_json::from_str(r#"{"value":123}"#).unwrap();
+        assert_eq!(v.value, Some(123));
+    }
+
+    #[test]
+    fn test_time_value_from_object() {
+        let v: TestTimeValue = serde_json::from_str(r#"{"value":{"time":456}}"#).unwrap();
+        assert_eq!(v.value, Some(456));
+    }
+
+    #[test]
+    fn test_time_value_from_null() {
+        let v: TestTimeValue = serde_json::from_str(r#"{"value":null}"#).unwrap();
+        assert_eq!(v.value, None);
+    }
+
+    #[test]
+    fn test_time_value_from_string() {
+        let v: TestTimeValue = serde_json::from_str(r#"{"value":"789"}"#).unwrap();
+        assert_eq!(v.value, Some(789));
+    }
+
+    #[derive(Debug, Clone, Deserialize, PartialEq)]
+    struct Inner {
+        name: String,
+    }
+
+    #[derive(Deserialize)]
+    struct TestMaybeFalse {
+        #[serde(default, deserialize_with = "deserialize_maybe_false")]
+        value: Option<Inner>,
+    }
+
+    #[test]
+    fn test_maybe_false_with_false() {
+        let v: TestMaybeFalse = serde_json::from_str(r#"{"value":false}"#).unwrap();
+        assert!(v.value.is_none(), "false should deserialize to None");
+    }
+
+    #[test]
+    fn test_maybe_false_with_null() {
+        let v: TestMaybeFalse = serde_json::from_str(r#"{"value":null}"#).unwrap();
+        assert!(v.value.is_none(), "null should deserialize to None");
+    }
+
+    #[test]
+    fn test_maybe_false_with_object() {
+        let v: TestMaybeFalse = serde_json::from_str(r#"{"value":{"name":"high"}}"#).unwrap();
+        assert_eq!(
+            v.value,
+            Some(Inner {
+                name: "high".to_owned()
+            }),
+            "valid object should deserialize to Some"
+        );
+    }
+
+    #[test]
+    fn test_maybe_false_absent() {
+        let v: TestMaybeFalse = serde_json::from_str(r#"{}"#).unwrap();
+        assert!(v.value.is_none(), "absent field should default to None");
     }
 }

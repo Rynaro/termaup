@@ -145,6 +145,62 @@ fn test_deserialize_task_detail_fixture() {
     assert_eq!(fields[0].name, "Story Points");
     assert_eq!(fields[0].field_type, "number");
     assert_eq!(fields[1].name, "Component");
+
+    // Checklists
+    assert_eq!(task.checklists.len(), 1);
+    let cl = &task.checklists[0];
+    assert_eq!(cl.name, "Pre-release Checklist");
+    assert_eq!(cl.items.len(), 3);
+    assert!(cl.items[0].resolved, "first item should be resolved");
+    assert!(!cl.items[1].resolved, "second item should not be resolved");
+    assert!(
+        cl.items[0].assignee.is_some(),
+        "first item should have assignee"
+    );
+
+    // Linked tasks
+    assert_eq!(task.linked_tasks.len(), 1);
+    assert_eq!(task.linked_tasks[0].task_id, "task_linked_001");
+
+    // Dependencies
+    assert_eq!(task.dependencies.len(), 1);
+    assert_eq!(task.dependencies[0].depends_on, "task_dep_001");
+
+    // Time tracking
+    assert_eq!(task.time_estimate, Some(7200000));
+    assert_eq!(task.time_spent, Some(3600000));
+
+    // Watchers
+    assert_eq!(task.watchers.len(), 1);
+    assert_eq!(task.watchers[0].username, "John Doe");
+
+    // Attachments
+    assert_eq!(task.attachments.len(), 1);
+    assert_eq!(
+        task.attachments[0].title.as_deref(),
+        Some("auth-flow-diagram.png")
+    );
+}
+
+#[test]
+fn test_deserialize_task_with_priority_false() {
+    // ClickUp returns "priority": false when no priority is set
+    let json = r##"{
+        "id": "task_no_priority",
+        "name": "Task without priority",
+        "status": { "status": "open", "color": "#ccc", "type": "open" },
+        "creator": { "id": 1, "username": "test", "email": "test@example.com" },
+        "priority": false,
+        "list": { "id": "l1" },
+        "folder": { "id": "f1" },
+        "space": { "id": "s1" }
+    }"##;
+
+    let task: Task = serde_json::from_str(json).expect("priority false should deserialize");
+    assert!(
+        task.priority.is_none(),
+        "priority: false should map to None"
+    );
 }
 
 #[test]

@@ -239,7 +239,7 @@ mod tests {
             priority: priority.map(|p| TaskPriority {
                 id: Some("1".to_string()),
                 priority: Some(p.to_string()),
-                color: "#ccc".to_string(),
+                color: Some("#ccc".to_string()),
             }),
             due_date: due.map(|d| d.to_string()),
             start_date: None,
@@ -260,6 +260,15 @@ mod tests {
             parent: None,
             subtasks: None,
             custom_fields: None,
+            checklists: vec![],
+            linked_tasks: vec![],
+            dependencies: vec![],
+            time_estimate: None,
+            time_spent: None,
+            watchers: vec![],
+            attachments: vec![],
+            points: None,
+            permission_level: None,
         }
     }
 

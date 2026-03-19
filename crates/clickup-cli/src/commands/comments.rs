@@ -1,0 +1,221 @@
+use anyhow::{Context, Result};
+use clap::Subcommand;
+
+use clickup_api::models::CreateCommentRequest;
+
+use crate::client_factory::create_client;
+use crate::output;
+
+/// Comment subcommands.
+#[derive(Subcommand)]
+pub enum CommentCommands {
+    /// List comments on a task with threaded replies.
+    List {
+        /// Task ID to show comments for.
+        #[arg(long)]
+        task: String,
+    },
+    /// Create a new comment on a task.
+    Create {
+        /// Task ID to comment on.
+        #[arg(long)]
+        task: String,
+        /// Comment text.
+        #[arg(short, long)]
+        message: String,
+        /// Notify all task watchers.
+        #[arg(long, default_value_t = false)]
+        notify_all: bool,
+    },
+    /// Reply to an existing comment (threaded).
+    Reply {
+        /// Comment ID to reply to.
+        #[arg(long)]
+        comment: String,
+        /// Reply text.
+        #[arg(short, long)]
+        message: String,
+        /// Notify all task watchers.
+        #[arg(long, default_value_t = false)]
+        notify_all: bool,
+    },
+}
+
+impl CommentCommands {
+    /// Dispatches to the appropriate comment handler.
+    pub async fn run(self, format: &str, workspace_override: Option<&str>) -> Result<()> {
+        match self {
+            Self::List { task } => list_comments(format, workspace_override, &task).await,
+            Self::Create {
+                task,
+                message,
+                notify_all,
+            } => create_comment(format, workspace_override, &task, &message, notify_all).await,
+            Self::Reply {
+                comment,
+                message,
+                notify_all,
+            } => reply_comment(format, workspace_override, &comment, &message, notify_all).await,
+        }
+    }
+}
+
+async fn list_comments(
+    format: &str,
+    workspace_override: Option<&str>,
+    task_id: &str,
+) -> Result<()> {
+    let (client, _config) = create_client(workspace_override)?;
+
+    let comments = client
+        .get_task_comments(task_id)
+        .await
+        .context("failed to fetch comments")?;
+
+    if comments.is_empty() {
+        output::info(&format!("No comments on task {task_id}"));
+        return Ok(());
+    }
+
+    if format == "json" {
+        let mut threaded = Vec::new();
+        for comment in &comments {
+            let mut entry = serde_json::json!({
+                "id": comment.id,
+                "author": comment.user.username,
+                "text": comment.comment_text,
+                "date": comment.date,
+                "reply_count": comment.reply_count,
+            });
+            if comment.reply_count > 0 {
+                match client.get_comment_replies(&comment.id).await {
+                    Ok(replies) => {
+                        let reply_json: Vec<serde_json::Value> = replies
+                            .iter()
+                            .map(|r| {
+                                serde_json::json!({
+                                    "id": r.id,
+                                    "author": r.user.username,
+                                    "text": r.comment_text,
+                                    "date": r.date,
+                                })
+                            })
+                            .collect();
+                        entry["replies"] = serde_json::Value::Array(reply_json);
+                    }
+                    Err(e) => {
+                        tracing::warn!("failed to load replies for {}: {e}", comment.id);
+                    }
+                }
+            }
+            threaded.push(entry);
+        }
+        output::print_json(&threaded);
+        return Ok(());
+    }
+
+    output::info(&format!(
+        "Comments on task {} ({} comment{})",
+        task_id,
+        comments.len(),
+        if comments.len() == 1 { "" } else { "s" }
+    ));
+
+    let mut rows: Vec<Vec<String>> = Vec::new();
+
+    for comment in &comments {
+        let date = output::format_date(Some(&comment.date));
+        rows.push(vec![
+            comment.id.clone(),
+            comment.user.username.clone(),
+            truncate_text(&comment.comment_text, 50),
+            date,
+        ]);
+
+        if comment.reply_count > 0 {
+            match client.get_comment_replies(&comment.id).await {
+                Ok(replies) => {
+                    for (i, reply) in replies.iter().enumerate() {
+                        let is_last = i == replies.len() - 1;
+                        let connector = if is_last { "└" } else { "├" };
+                        rows.push(vec![
+                            format!("{connector} {}", reply.id),
+                            reply.user.username.clone(),
+                            truncate_text(&reply.comment_text, 50),
+                            output::format_date(Some(&reply.date)),
+                        ]);
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("failed to load replies for {}: {e}", comment.id);
+                }
+            }
+        }
+    }
+
+    output::print_table(&["ID", "Author", "Comment", "Date"], rows);
+
+    Ok(())
+}
+
+async fn create_comment(
+    _format: &str,
+    workspace_override: Option<&str>,
+    task_id: &str,
+    message: &str,
+    notify_all: bool,
+) -> Result<()> {
+    let (client, _config) = create_client(workspace_override)?;
+
+    let request = CreateCommentRequest {
+        comment_text: message.to_string(),
+        notify_all: if notify_all { Some(true) } else { None },
+    };
+
+    let comment = client
+        .create_task_comment(task_id, &request)
+        .await
+        .context("failed to create comment")?;
+
+    output::success(&format!("Comment created (ID: {})", comment.id));
+    Ok(())
+}
+
+async fn reply_comment(
+    _format: &str,
+    workspace_override: Option<&str>,
+    comment_id: &str,
+    message: &str,
+    notify_all: bool,
+) -> Result<()> {
+    let (client, _config) = create_client(workspace_override)?;
+
+    let request = CreateCommentRequest {
+        comment_text: message.to_string(),
+        notify_all: if notify_all { Some(true) } else { None },
+    };
+
+    let reply = client
+        .create_comment_reply(comment_id, &request)
+        .await
+        .context("failed to create reply")?;
+
+    output::success(&format!("Reply created (ID: {})", reply.id));
+    Ok(())
+}
+
+/// Truncates text to a maximum character length, adding an ellipsis if needed.
+///
+/// Uses only the first line if the text is multi-line. Safe for multi-byte
+/// UTF-8 characters.
+fn truncate_text(text: &str, max_len: usize) -> String {
+    let first_line = text.lines().next().unwrap_or(text);
+    if first_line.chars().count() > max_len {
+        let truncated: String = first_line.chars().take(max_len).collect();
+        format!("{truncated}…")
+    } else if text.lines().count() > 1 {
+        format!("{first_line}…")
+    } else {
+        first_line.to_string()
+    }
+}

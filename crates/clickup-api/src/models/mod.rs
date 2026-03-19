@@ -1,5 +1,7 @@
+pub mod checklist;
 pub mod comment;
 pub mod folder;
+pub mod linked_task;
 pub mod list;
 pub mod space;
 pub mod status;
@@ -7,8 +9,10 @@ pub mod task;
 pub mod user;
 pub mod workspace;
 
+pub use checklist::*;
 pub use comment::*;
 pub use folder::*;
+pub use linked_task::*;
 pub use list::*;
 pub use space::*;
 pub use status::*;

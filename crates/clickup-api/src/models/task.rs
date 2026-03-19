@@ -42,7 +42,10 @@ pub struct Task {
     #[serde(default)]
     pub assignees: Vec<User>,
     /// Task priority.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_maybe_false"
+    )]
     pub priority: Option<TaskPriority>,
     /// Due-date timestamp (milliseconds).
     #[serde(default)]
@@ -74,6 +77,58 @@ pub struct Task {
     /// Custom field values.
     #[serde(default)]
     pub custom_fields: Option<Vec<CustomField>>,
+    /// Checklists attached to the task.
+    #[serde(default)]
+    pub checklists: Vec<super::checklist::Checklist>,
+    /// Tasks linked to this task.
+    #[serde(default)]
+    pub linked_tasks: Vec<super::linked_task::LinkedTask>,
+    /// Task dependencies (blocking/waiting relationships).
+    #[serde(default)]
+    pub dependencies: Vec<super::linked_task::TaskDependency>,
+    /// Estimated time for this task (milliseconds).
+    #[serde(default)]
+    pub time_estimate: Option<u64>,
+    /// Time spent on this task (milliseconds). May be a number or `{"time": ms}`.
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_time_value"
+    )]
+    pub time_spent: Option<u64>,
+    /// Users watching this task.
+    #[serde(default)]
+    pub watchers: Vec<User>,
+    /// File attachments on this task.
+    #[serde(default)]
+    pub attachments: Vec<Attachment>,
+    /// Story points assigned to this task.
+    #[serde(default)]
+    pub points: Option<serde_json::Value>,
+    /// Permission level of the current user on this task.
+    #[serde(default)]
+    pub permission_level: Option<String>,
+}
+
+/// A file attachment on a task.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Attachment {
+    /// Attachment ID.
+    pub id: String,
+    /// File title / name.
+    #[serde(default)]
+    pub title: Option<String>,
+    /// URL to download the attachment.
+    #[serde(default)]
+    pub url: Option<String>,
+    /// File extension (e.g. "pdf", "png").
+    #[serde(default)]
+    pub extension: Option<String>,
+    /// Upload timestamp (milliseconds).
+    #[serde(default)]
+    pub date: Option<String>,
+    /// Thumbnail URL for image attachments.
+    #[serde(default)]
+    pub thumbnail_small: Option<String>,
 }
 
 /// Inline status on a task.
@@ -100,7 +155,8 @@ pub struct TaskPriority {
     #[serde(default)]
     pub priority: Option<String>,
     /// Hex colour.
-    pub color: String,
+    #[serde(default)]
+    pub color: Option<String>,
 }
 
 /// A tag on a task.
@@ -271,6 +327,59 @@ mod tests {
     }
 
     #[test]
+    fn test_deserialize_task_with_time_and_attachments() {
+        let json = serde_json::json!({
+            "id": "t2",
+            "name": "Tracked task",
+            "status": {
+                "status": "open",
+                "color": "#ccc",
+                "type": "open"
+            },
+            "creator": {
+                "id": 1,
+                "username": "u",
+                "email": "u@x.com"
+            },
+            "list": { "id": "l1" },
+            "folder": { "id": "f1" },
+            "space": { "id": "s1" },
+            "time_estimate": 3600000,
+            "time_spent": {"time": 1200000},
+            "watchers": [
+                {
+                    "id": 1003,
+                    "username": "watcher1",
+                    "email": "w@x.com"
+                }
+            ],
+            "attachments": [
+                {
+                    "id": "att_1",
+                    "title": "design.png",
+                    "url": "https://example.com/design.png",
+                    "extension": "png",
+                    "date": "1710000000000",
+                    "thumbnail_small": "https://example.com/thumb.png"
+                }
+            ],
+            "points": 8,
+            "permission_level": "create"
+        });
+
+        let task: Task = serde_json::from_value(json).expect("deserialize task");
+        assert_eq!(task.time_estimate, Some(3600000));
+        assert_eq!(task.time_spent, Some(1200000));
+        assert_eq!(task.watchers.len(), 1);
+        assert_eq!(task.watchers[0].username, "watcher1");
+        assert_eq!(task.attachments.len(), 1);
+        assert_eq!(task.attachments[0].id, "att_1");
+        assert_eq!(task.attachments[0].title.as_deref(), Some("design.png"));
+        assert_eq!(task.points.unwrap(), serde_json::json!(8));
+        assert_eq!(task.permission_level.as_deref(), Some("create"));
+    }
+
+    #[test]
     fn test_deserialize_task_minimal() {
         let json = serde_json::json!({
             "id": "t1",
@@ -292,6 +401,27 @@ mod tests {
         assert!(task.assignees.is_empty());
         assert!(task.tags.is_empty());
         assert!(task.priority.is_none());
+    }
+
+    #[test]
+    fn test_deserialize_task_priority_false() {
+        let json = serde_json::json!({
+            "id": "t2",
+            "name": "No priority task",
+            "status": { "status": "open", "color": "#ccc", "type": "open" },
+            "creator": {
+                "id": 1,
+                "username": "u",
+                "email": "u@x.com"
+            },
+            "priority": false,
+            "list": { "id": "l1" },
+            "folder": { "id": "f1" },
+            "space": { "id": "s1" }
+        });
+
+        let task: Task = serde_json::from_value(json).expect("priority:false should deserialize");
+        assert!(task.priority.is_none(), "priority false should map to None");
     }
 
     #[test]

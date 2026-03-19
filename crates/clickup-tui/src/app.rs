@@ -768,6 +768,15 @@ mod tests {
             parent: None,
             subtasks: None,
             custom_fields: None,
+            checklists: vec![],
+            linked_tasks: vec![],
+            dependencies: vec![],
+            time_estimate: None,
+            time_spent: None,
+            watchers: vec![],
+            attachments: vec![],
+            points: None,
+            permission_level: None,
         };
 
         app.tasks = vec![

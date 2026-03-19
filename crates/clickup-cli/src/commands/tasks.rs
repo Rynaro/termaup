@@ -172,7 +172,7 @@ fn print_task_detail(task: &clickup_api::models::Task) {
 
     println!(
         "  Status:   {}",
-        output::format_status(&task.status.status, &task.status.color,)
+        output::format_status(&task.status.status, &task.status.color)
     );
 
     let priority_label = task.priority.as_ref().and_then(|p| p.priority.as_deref());
@@ -196,10 +196,175 @@ fn print_task_detail(task: &clickup_api::models::Task) {
         output::format_date(task.due_date.as_deref())
     );
 
+    if let Some(estimate) = task.time_estimate {
+        println!("  Estimate: {}", format_duration(estimate));
+    }
+    if let Some(spent) = task.time_spent {
+        println!("  Tracked:  {}", format_duration(spent));
+    }
+
     if !task.tags.is_empty() {
         let tag_names: Vec<&str> = task.tags.iter().map(|t| t.name.as_str()).collect();
         println!("  Tags:     {}", tag_names.join(", "));
     }
 
+    if !task.watchers.is_empty() {
+        let names: Vec<&str> = task.watchers.iter().map(|w| w.username.as_str()).collect();
+        println!("  Watchers: {}", names.join(", "));
+    }
+
     println!("  URL:      {}", task.url);
+
+    // ─── Custom Fields ───
+    if let Some(fields) = &task.custom_fields {
+        let non_empty: Vec<_> = fields.iter().filter(|f| f.value.is_some()).collect();
+        if !non_empty.is_empty() {
+            println!("\n─── Custom Fields ───\n");
+            for field in &non_empty {
+                let display = format_custom_field(&field.field_type, field.value.as_ref());
+                println!("  {}: {display}", field.name);
+            }
+        }
+    }
+
+    // ─── Subtasks ───
+    if let Some(subtasks) = &task.subtasks
+        && !subtasks.is_empty()
+    {
+        println!("\n─── Subtasks ({}) ───\n", subtasks.len());
+        for st in subtasks {
+            let status = output::format_status(&st.status.status, &st.status.color);
+            println!("  ● {} [{}]", st.name, status);
+        }
+    }
+
+    // ─── Checklists ───
+    if !task.checklists.is_empty() {
+        for cl in &task.checklists {
+            let total = cl.items.len();
+            let resolved = cl.items.iter().filter(|i| i.resolved).count();
+            println!("\n─── {} ({resolved}/{total}) ───\n", cl.name);
+            for item in &cl.items {
+                let check = if item.resolved { "[x]" } else { "[ ]" };
+                let assignee = item
+                    .assignee
+                    .as_ref()
+                    .filter(|a| !a.username.is_empty())
+                    .map(|a| format!("  @{}", a.username))
+                    .unwrap_or_default();
+                println!("  {check} {}{assignee}", item.name);
+            }
+        }
+    }
+
+    // ─── Linked Tasks ───
+    if !task.linked_tasks.is_empty() {
+        println!("\n─── Linked Tasks ({}) ───\n", task.linked_tasks.len());
+        for lt in &task.linked_tasks {
+            println!("  🔗 {}", lt.task_id);
+        }
+    }
+
+    // ─── Dependencies ───
+    if !task.dependencies.is_empty() {
+        println!("\n─── Dependencies ({}) ───\n", task.dependencies.len());
+        for dep in &task.dependencies {
+            if dep.depends_on == task.id {
+                println!("  → blocks {}", dep.task_id);
+            } else {
+                println!("  ← waiting on {}", dep.depends_on);
+            }
+        }
+    }
+
+    // ─── Attachments ───
+    if !task.attachments.is_empty() {
+        println!("\n─── Attachments ({}) ───\n", task.attachments.len());
+        for att in &task.attachments {
+            let name = att.title.as_deref().unwrap_or("Untitled");
+            let icon = match att.extension.as_deref().unwrap_or("") {
+                "pdf" => "📄",
+                "png" | "jpg" | "jpeg" | "gif" | "svg" | "webp" => "🖼️",
+                "zip" | "tar" | "gz" | "rar" => "📦",
+                _ => "📎",
+            };
+            println!("  {icon} {name}");
+        }
+    }
+}
+
+fn format_duration(ms: u64) -> String {
+    let total_secs = ms / 1000;
+    let hours = total_secs / 3600;
+    let minutes = (total_secs % 3600) / 60;
+    if hours > 0 && minutes > 0 {
+        format!("{hours}h {minutes}m")
+    } else if hours > 0 {
+        format!("{hours}h")
+    } else {
+        format!("{minutes}m")
+    }
+}
+
+fn format_custom_field(field_type: &str, value: Option<&serde_json::Value>) -> String {
+    let Some(val) = value else {
+        return "—".to_string();
+    };
+    match field_type {
+        "number" | "currency" => {
+            if let Some(n) = val.as_f64() {
+                if n.fract() == 0.0 {
+                    format!("{}", n as i64)
+                } else {
+                    format!("{n:.2}")
+                }
+            } else {
+                val.to_string()
+            }
+        }
+        "checkbox" => {
+            if val.as_bool().unwrap_or(false) {
+                "✅".to_string()
+            } else {
+                "☐".to_string()
+            }
+        }
+        "date" => {
+            if let Some(s) = val.as_str() {
+                output::format_date(Some(s))
+            } else if let Some(n) = val.as_i64() {
+                output::format_date(Some(&n.to_string()))
+            } else {
+                val.to_string()
+            }
+        }
+        "drop_down" | "labels" => {
+            if let Some(arr) = val.as_array() {
+                arr.iter()
+                    .filter_map(|v| v.get("name").or(v.get("label")).and_then(|n| n.as_str()))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            } else if let Some(obj) = val.as_object() {
+                obj.get("name")
+                    .or(obj.get("label"))
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("—")
+                    .to_string()
+            } else if let Some(s) = val.as_str() {
+                s.to_string()
+            } else {
+                val.to_string()
+            }
+        }
+        "url" | "email" | "phone" | "short_text" | "text" => {
+            val.as_str().unwrap_or("—").to_string()
+        }
+        _ => {
+            if let Some(s) = val.as_str() {
+                s.to_string()
+            } else {
+                val.to_string()
+            }
+        }
+    }
 }

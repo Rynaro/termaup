@@ -80,5 +80,88 @@
   "custom_fields": [
     { "id": "cf_001", "name": "Story Points", "type": "number", "value": 5 },
     { "id": "cf_002", "name": "Component", "type": "drop_down", "value": "auth" }
-  ]
+  ],
+  "checklists": [
+    {
+      "id": "cl_001",
+      "name": "Pre-release Checklist",
+      "resolved": false,
+      "items": [
+        {
+          "id": "cli_001",
+          "name": "Write unit tests",
+          "resolved": true,
+          "assignee": {
+            "id": 12345678,
+            "username": "John Doe",
+            "email": "john@example.com"
+          },
+          "orderindex": 0,
+          "parent": null
+        },
+        {
+          "id": "cli_002",
+          "name": "Code review",
+          "resolved": false,
+          "assignee": null,
+          "orderindex": 1,
+          "parent": null
+        },
+        {
+          "id": "cli_003",
+          "name": "Update documentation",
+          "resolved": false,
+          "assignee": null,
+          "orderindex": 2,
+          "parent": null
+        }
+      ],
+      "orderindex": 0,
+      "task_count": 3,
+      "unresolved": 2
+    }
+  ],
+  "linked_tasks": [
+    {
+      "task_id": "task_linked_001",
+      "link_id": "link_001",
+      "date_created": "1710500000000",
+      "userid": "12345678",
+      "workspace_id": "team_001"
+    }
+  ],
+  "dependencies": [
+    {
+      "task_id": "task_abc123",
+      "depends_on": "task_dep_001",
+      "type": 1,
+      "date_created": "1710400000000",
+      "userid": "12345678",
+      "workspace_id": "team_001"
+    }
+  ],
+  "time_estimate": 7200000,
+  "time_spent": 3600000,
+  "watchers": [
+    {
+      "id": 12345678,
+      "username": "John Doe",
+      "email": "john@example.com",
+      "color": "#7B68EE",
+      "profilePicture": null,
+      "initials": "JD"
+    }
+  ],
+  "attachments": [
+    {
+      "id": "att_001",
+      "title": "auth-flow-diagram.png",
+      "url": "https://attachments.clickup.com/att_001",
+      "extension": "png",
+      "date": "1710650000000",
+      "thumbnail_small": "https://attachments.clickup.com/att_001/thumb"
+    }
+  ],
+  "points": 5,
+  "permission_level": "create"
 }
