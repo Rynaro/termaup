@@ -28,8 +28,15 @@ pub enum ClickUpError {
     NetworkError(#[from] reqwest::Error),
 
     /// Failed to deserialize an API response.
-    #[error("Deserialization error: {0}")]
-    DeserializationError(#[from] serde_json::Error),
+    #[error("Deserialization error at {endpoint}: {message}")]
+    DeserializationError {
+        /// The serde error message.
+        message: String,
+        /// The endpoint path that produced the error.
+        endpoint: String,
+        /// A preview of the response body (first 200 chars).
+        body_preview: String,
+    },
 
     /// A configuration or credential error.
     #[error("Configuration error: {0}")]
@@ -38,6 +45,20 @@ pub enum ClickUpError {
     /// The requested resource was not found.
     #[error("Not found: {0}")]
     NotFound(String),
+}
+
+impl ClickUpError {
+    /// Creates a `DeserializationError` from a `serde_json::Error` without endpoint context.
+    ///
+    /// Use this when deserializing values that have already been fetched
+    /// (e.g., extracting nested fields from a raw `serde_json::Value`).
+    pub fn deserialization(err: serde_json::Error) -> Self {
+        Self::DeserializationError {
+            message: err.to_string(),
+            endpoint: String::new(),
+            body_preview: String::new(),
+        }
+    }
 }
 
 /// A convenience `Result` type that uses [`ClickUpError`].
@@ -80,5 +101,36 @@ mod tests {
     fn test_not_found_display() {
         let err = ClickUpError::NotFound("task abc123".into());
         assert_eq!(err.to_string(), "Not found: task abc123");
+    }
+
+    #[test]
+    fn test_deserialization_error_display() {
+        let err = ClickUpError::DeserializationError {
+            message: "missing field `id`".into(),
+            endpoint: "/api/v2/task/abc".into(),
+            body_preview: r#"{"name":"test"}"#.into(),
+        };
+        assert_eq!(
+            err.to_string(),
+            "Deserialization error at /api/v2/task/abc: missing field `id`"
+        );
+    }
+
+    #[test]
+    fn test_deserialization_helper_creates_error() {
+        let serde_err = serde_json::from_str::<i32>("not a number").unwrap_err();
+        let err = ClickUpError::deserialization(serde_err);
+        match err {
+            ClickUpError::DeserializationError {
+                message,
+                endpoint,
+                body_preview,
+            } => {
+                assert!(!message.is_empty(), "message should contain serde error");
+                assert!(endpoint.is_empty(), "endpoint should be empty");
+                assert!(body_preview.is_empty(), "body_preview should be empty");
+            }
+            other => panic!("expected DeserializationError, got: {other:?}"),
+        }
     }
 }

@@ -1,5 +1,5 @@
 use crate::client::ClickUpClient;
-use crate::error::Result;
+use crate::error::{ClickUpError, Result};
 use crate::models::Task;
 use crate::pagination::PaginatedResponse;
 
@@ -114,7 +114,7 @@ fn tasks_extractor(value: serde_json::Value) -> Result<PaginatedResponse<Task>> 
         .cloned()
         .unwrap_or(serde_json::Value::Array(vec![]));
 
-    let data: Vec<Task> = serde_json::from_value(tasks_value)?;
+    let data: Vec<Task> = serde_json::from_value(tasks_value).map_err(ClickUpError::deserialization)?;
     Ok(PaginatedResponse::new(data, last_page))
 }
 

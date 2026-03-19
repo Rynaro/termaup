@@ -57,7 +57,7 @@ mod tests {
         assert_eq!(comments.len(), 2);
         assert_eq!(comments[0].id, "c1");
         assert_eq!(comments[0].comment_text, "Looks good!");
-        assert_eq!(comments[0].user.username, "alice");
+        assert_eq!(comments[0].user.as_ref().unwrap().username, "alice");
         assert_eq!(comments[1].id, "c2");
     }
 }

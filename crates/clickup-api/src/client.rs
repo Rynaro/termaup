@@ -80,7 +80,7 @@ impl ClickUpClient {
 
         let response = self.http.get(&url).query(params).send().await?;
 
-        self.handle_response(response).await
+        self.handle_response(response, &url).await
     }
 
     /// Fetches all pages of a paginated endpoint, collecting items into a
@@ -123,7 +123,11 @@ impl ClickUpClient {
 
     /// Processes an HTTP response, mapping status codes to error variants and
     /// updating the rate limiter from response headers.
-    async fn handle_response<T: DeserializeOwned>(&self, response: reqwest::Response) -> Result<T> {
+    async fn handle_response<T: DeserializeOwned>(
+        &self,
+        response: reqwest::Response,
+        endpoint: &str,
+    ) -> Result<T> {
         // Update rate limiter from headers.
         if let (Some(remaining), Some(reset)) = (
             response
@@ -148,7 +152,18 @@ impl ClickUpClient {
 
         if status.is_success() {
             let body = response.text().await?;
-            let parsed: T = serde_json::from_str(&body)?;
+            tracing::trace!(body_len = body.len(), "response body received");
+            let parsed: T = serde_json::from_str(&body).map_err(|e| {
+                tracing::error!(
+                    body_preview = &body[..body.len().min(500)],
+                    "deserialization failed"
+                );
+                ClickUpError::DeserializationError {
+                    message: e.to_string(),
+                    endpoint: endpoint.to_string(),
+                    body_preview: body[..body.len().min(200)].to_string(),
+                }
+            })?;
             return Ok(parsed);
         }
 
