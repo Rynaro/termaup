@@ -1,31 +1,46 @@
+<div align="center">
+
 # 🚀 termaup
 
-[![CI](https://github.com/YOUR_USER/termaup/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USER/termaup/actions/workflows/ci.yml)
+**ClickUp in your terminal — a fast CLI and TUI client built in Rust.**
+
+[![CI](https://github.com/Rynaro/termaup/actions/workflows/ci.yml/badge.svg)](https://github.com/Rynaro/termaup/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Status: WIP](https://img.shields.io/badge/Status-Work%20in%20Progress-orange)
 
-**A blazing-fast CLI and TUI client for [ClickUp](https://clickup.com), built in Rust.**
+> ⚠️ **This project is under active development.** Some features are still being
+> built and APIs may change. A public roadmap will be shared soon — stay tuned!
 
-termaup brings the full power of ClickUp to your terminal — navigate workspaces, browse tasks, and view rich markdown descriptions without ever leaving the command line.
+</div>
+
+---
+
+termaup brings the power of [ClickUp](https://clickup.com) to your terminal.
+Navigate workspaces, browse tasks, and read rich markdown descriptions without
+ever leaving the command line.
+
+Whether you prefer quick one-off commands or an interactive full-screen
+experience, termaup has you covered with both a **CLI** and a **TUI**.
 
 ## ✨ Features
 
-- 🖥️ **CLI** — Fast command-line access to ClickUp workspaces, spaces, lists, and tasks
-- 🎨 **TUI** — Beautiful interactive terminal UI with keyboard navigation and real-time filtering
-- 📝 **Rich Markdown** — Task descriptions rendered with full markdown formatting in the terminal
-- 🔍 **Search & Filter** — Instantly filter workspaces, spaces, and tasks by name
-- 🔐 **Secure Auth** — API tokens stored in your OS keychain (with file fallback)
-- 🎯 **Multiple Output Formats** — Table, JSON, and markdown output for CLI commands
-- ⚡ **Async & Fast** — Built on tokio with connection pooling and rate limit handling
-- 🐳 **Docker Ready** — Run in containers with config volume mounting
-
-## 📸 Screenshots
-
-<!-- TODO: Add GIF recordings of the TUI and CLI in action -->
-<!-- Use a tool like `vhs` (https://github.com/charmbracelet/vhs) to record terminal sessions -->
+| | Feature | Status |
+|---|---------|--------|
+| 🖥️ | **CLI** — Command-line access to workspaces, spaces, lists, and tasks | ✅ Available |
+| 🎨 | **TUI** — Interactive terminal UI with keyboard navigation | ✅ Available |
+| 📝 | **Rich Markdown** — Task descriptions rendered in the terminal | ✅ Available |
+| 🔍 | **Search & Filter** — Instantly filter items by name | ✅ Available |
+| 🔐 | **Secure Auth** — Tokens stored in your OS keychain (file fallback) | ✅ Available |
+| 🎯 | **Multiple Output Formats** — Table, JSON, and markdown for CLI | ✅ Available |
+| ⚡ | **Async & Fast** — tokio runtime, connection pooling, rate-limit handling | ✅ Available |
+| 🐳 | **Docker Ready** — Run without installing Rust | ✅ Available |
+| 🏷️ | **Task Management** — Checklists, custom fields, time tracking | ✅ Available |
+| 📋 | **Homebrew Formula** | 🔜 Coming soon |
+| 📦 | **Pre-built Binaries** | 🔜 Coming soon |
 
 ## 📦 Installation
 
-### From source
+### From source (requires [Rust](https://rustup.rs/))
 
 ```sh
 # Install the CLI
@@ -36,6 +51,8 @@ cargo install --path crates/clickup-tui
 ```
 
 ### Docker
+
+No Rust toolchain needed — everything runs in a container:
 
 ```sh
 # First-time setup
@@ -57,43 +74,27 @@ docker compose run --rm clickup auth login
 docker compose run --rm clickup-tui
 ```
 
-### Binary releases
-
-Download pre-built binaries from the [GitHub Releases](https://github.com/YOUR_USER/termaup/releases) page.
-
-### Homebrew (coming soon)
-
-```sh
-# brew install termaup
-```
-
 ## 🚀 Quick Start
 
-1. **Authenticate** with your ClickUp API token ([get one here](https://app.clickup.com/settings/apps)):
+1. **Get a ClickUp API token** from your [ClickUp App settings](https://app.clickup.com/settings/apps).
+
+2. **Authenticate:**
 
    ```sh
-   clickup auth login --token pk_YOUR_TOKEN
+   clickup auth login
+   # You will be prompted to enter your token securely
    ```
 
-2. **List your spaces:**
+3. **Explore your workspace:**
 
    ```sh
+   clickup workspace list
    clickup space list
-   ```
-
-3. **Browse tasks in a list:**
-
-   ```sh
    clickup task list --list LIST_ID
-   ```
-
-4. **View a task with rich markdown:**
-
-   ```sh
    clickup task view TASK_ID
    ```
 
-5. **Launch the TUI** for interactive browsing:
+4. **Or launch the TUI** for an interactive experience:
 
    ```sh
    clickup-tui
@@ -105,17 +106,17 @@ Download pre-built binaries from the [GitHub Releases](https://github.com/YOUR_U
 
 | Command | Description |
 |---------|-------------|
-| `clickup auth login [--token TOKEN]` | Authenticate with ClickUp (prompts for token if not provided) |
+| `clickup auth login` | Authenticate with ClickUp (prompts for token) |
 | `clickup auth status` | Show current authentication status |
 | `clickup auth logout` | Remove stored credentials |
-| `clickup auth switch [--workspace ID]` | Switch default workspace |
+| `clickup auth switch` | Switch default workspace |
 
 ### Browsing
 
 | Command | Description |
 |---------|-------------|
 | `clickup workspace list` | List all workspaces |
-| `clickup space list [--workspace ID]` | List spaces in a workspace |
+| `clickup space list` | List spaces in a workspace |
 | `clickup space get SPACE_ID` | Show space details |
 | `clickup list list --space SPACE_ID` | List all lists in a space |
 | `clickup list list --folder FOLDER_ID` | List lists in a folder |
@@ -135,77 +136,94 @@ Download pre-built binaries from the [GitHub Releases](https://github.com/YOUR_U
 
 | Key | Action |
 |-----|--------|
-| `↑` / `k` | Move up / scroll up |
-| `↓` / `j` | Move down / scroll down |
-| `Enter` | Select / open item |
-| `Esc` | Go back one screen |
-| `/` | Search / filter current list |
-| `r` | Refresh current data |
-| `?` | Toggle help overlay |
+| `↑` / `k` | Move up |
+| `↓` / `j` | Move down |
+| `Enter` | Open selected item |
+| `Esc` | Go back |
+| `/` | Search / filter |
+| `r` | Refresh data |
+| `?` | Toggle help |
 | `q` / `Ctrl+C` | Quit |
 
-**TUI Navigation flow:** Workspaces → Spaces → Tasks → Task Detail
+**Navigation:** Workspaces → Spaces → Lists → Tasks → Task Detail
 
 ## ⚙️ Configuration
 
-### Config file
-
-Located at `~/.config/clickup-rs/config.toml`:
+Config lives at `~/.config/clickup-rs/config.toml`:
 
 ```toml
 default_workspace_id = "your_workspace_id"
-api_base_url = "https://api.clickup.com/api/v2"  # optional override
 ```
 
-### Environment variables
-
-| Variable | Description |
-|----------|-------------|
-| `CLICKUP_TOKEN` | Override stored API token |
-| `CLICKUP_LOG` | Log level filter (`error`, `warn`, `info`, `debug`, `trace`) |
-
-### Debugging
+| Environment Variable | Description |
+|----------------------|-------------|
+| `CLICKUP_TOKEN` | Override the stored API token |
+| `CLICKUP_LOG` | Set log level (`error`, `warn`, `info`, `debug`, `trace`) |
 
 ```sh
-# Verbose CLI output
+# Debug mode
 CLICKUP_LOG=debug clickup task list --list LIST_ID
 
-# Maximum verbosity
-CLICKUP_LOG=trace clickup space list
-
-# TUI logs (written to file since TUI uses the terminal)
+# TUI logs (written to file since TUI owns the terminal)
 tail -f ~/.config/clickup-rs/tui.log
 ```
 
-## 🛠️ `bin/` Scripts
+## 🛠️ Development
 
-Convenience scripts that work without installing Rust (Docker only):
+Convenience scripts are available in `bin/` for Docker-based workflows:
 
 | Script | Description |
 |--------|-------------|
 | `bin/setup` | Build Docker image and prepare config directory |
 | `bin/clickup` | Run any CLI command via Docker |
 | `bin/termaup` | Launch the TUI via Docker |
-| `bin/dev <cmd>` | Development helper (`build`, `test`, `lint`, `fmt`, `check`, `release`, `clean`) |
-| `bin/docker-build` | Rebuild the Docker image |
-| `bin/test` | Run the test suite |
+| `bin/dev <cmd>` | Dev helper: `build`, `test`, `lint`, `fmt`, `check`, `release`, `clean` |
+| `bin/test` | Run the full test suite |
+
+Or if you have Rust installed locally:
+
+```sh
+cargo build --workspace
+cargo test --workspace
+cargo clippy --workspace -- -D warnings
+```
 
 ## 🏗️ Architecture
 
 termaup is organized as a Cargo workspace with three crates:
 
-| Crate | Type | Description |
-|-------|------|-------------|
-| `clickup-api` | Library | Pure async ClickUp API v2 client with typed endpoints, rate limiting, and pagination |
-| `clickup-cli` | Binary | clap-based CLI with table, JSON, and markdown output |
-| `clickup-tui` | Binary | ratatui-based TUI with async data loading and markdown rendering |
+```
+termaup/
+├── crates/
+│   ├── clickup-api   # Library — async API client, models, rate limiting, pagination
+│   ├── clickup-cli   # Binary — clap-based CLI with rich output formatting
+│   └── clickup-tui   # Binary — ratatui-based TUI with async data loading
+├── bin/              # Docker convenience scripts
+├── docs/             # Additional documentation
+└── Cargo.toml        # Workspace root
+```
 
-Dependency flow: `clickup-cli` and `clickup-tui` both depend on `clickup-api`. The two binaries never depend on each other.
+**Dependency flow:** both `clickup-cli` and `clickup-tui` depend on `clickup-api`.
+The two binaries are independent of each other.
+
+## 🗺️ Roadmap
+
+A detailed public roadmap is coming soon! In the meantime, here's a glimpse of
+what's planned:
+
+- Pre-built binaries and Homebrew distribution
+- Task creation and editing from the terminal
+- OAuth2 authentication flow
+- Notification support
+- Offline caching
+
+Watch or star this repo to get notified when the roadmap drops. 🌟
 
 ## 🤝 Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR guidelines.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for
+development setup, code style guidelines, and PR conventions.
 
 ## 📄 License
 
-MIT — see [LICENSE](LICENSE) for details.
+[MIT](LICENSE) © termaup contributors
