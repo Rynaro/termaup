@@ -45,6 +45,26 @@ This skill creates all the Rust structs that represent ClickUp API entities. Eac
 - Use `#[serde(alias = "...")]` when the API uses inconsistent casing
 - ClickUp timestamps are millisecond Unix timestamps as strings (e.g., `"1679012345000"`) — store as `Option<String>` and provide conversion methods
 
+### Defensive Deserialization Rules
+
+The ClickUp API is type-unstable and endpoint-inconsistent. See `docs/clickup-api-quirks.md` for the full catalog. Key rules:
+
+1. **Only `id` and `name` may be required fields** — all others must be `Option<T>` or `#[serde(default)]`
+2. **All `Vec` fields**: `#[serde(default, deserialize_with = "crate::serde_helpers::deserialize_null_as_default")]` — ClickUp returns `null` for empty arrays
+3. **All ID fields**: use `deserialize_string_or_number` (or `deserialize_default_string_or_number` for defaultable structs) — IDs can be strings or integers
+4. **Boolean fields on non-core structs**: consider `deserialize_bool_or_int` — ClickUp sends `0`/`1` instead of `true`/`false`
+5. **Sub-object fields** (`list`, `folder`, `space`, `creator`): MUST be `Option<T>` with `#[serde(default)]` — absent for TIML tasks, search results
+6. **Priority-like fields**: use `deserialize_maybe_false` — API sends `false` instead of `null`
+7. **Time fields**: use `deserialize_time_value` — number, `{"time": ms}`, or string
+
+### Testing requirements
+
+Every model struct must have these test cases:
+1. **Full response** — All fields populated with typical values
+2. **Minimal response** — Only `id` (and `name` where applicable)  
+3. **Null-heavy response** — Every nullable field set to explicit `null`
+4. **Type-mixed response** — IDs as integers, booleans as integers, times as objects
+
 ### Key type mappings
 
 | API field | Rust type | Notes |

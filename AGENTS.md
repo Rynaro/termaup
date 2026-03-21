@@ -142,6 +142,21 @@ widgets/    → Custom ratatui widgets
 - TUI log: `~/.config/clickup-rs/tui.log`
 - Environment variables: `CLICKUP_LOG` (log level), `CLICKUP_TOKEN` (token override)
 
+## Defensive Deserialization
+
+The ClickUp API v2 is type-unstable and endpoint-inconsistent. See [`docs/clickup-api-quirks.md`](docs/clickup-api-quirks.md) for the full catalog of known quirks.
+
+**Golden rule**: Only `id` and `name` fields should be required on model structs. Everything else must tolerate absence, `null`, or unexpected types.
+
+Key patterns:
+- All `Vec` fields: `#[serde(default, deserialize_with = "deserialize_null_as_default")]`
+- All ID fields: `deserialize_string_or_number` or `deserialize_default_string_or_number`
+- Sub-objects (`list`, `folder`, `space`, `creator`): `Option<T>` + `#[serde(default)]`
+- Boolean fields: consider `deserialize_bool_or_int` (API sends `0`/`1`)
+- Priority: `deserialize_maybe_false` (API sends `false` not `null`)
+- Time values: `deserialize_time_value` (number, `{"time": ms}`, or string)
+- Every model must have tests for: full, minimal (id+name only), null-heavy, and type-mixed responses
+
 ## Code Quality Gates
 
 Every PR must pass:

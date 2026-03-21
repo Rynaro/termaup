@@ -60,6 +60,9 @@ Each endpoint module should include `#[cfg(test)] mod tests` that:
 2. Mount a mock for the endpoint URL returning the corresponding fixture JSON
 3. Create a `ClickUpClient` pointing at the mock server
 4. Call the endpoint method and assert the returned struct fields
+- Include "sparse response" tests: mock the endpoint returning minimal JSON (only `id` and `name`)
+- Include tests for TIML task shape variance (missing `list`, `folder`, `space` fields)
+- Include tests for null/absent/false handling on response fields
 
 ## Acceptance
 

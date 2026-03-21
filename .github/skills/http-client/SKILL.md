@@ -73,6 +73,13 @@ pub struct RateLimiter {
 - Accumulates all items across pages
 - Returns `Vec<T>` with all collected items
 
+### Response diagnostics
+
+- Log full response bodies at `tracing::trace!` level for debugging (gated behind `CLICKUP_LOG=trace`)
+- On deserialization failure, log the endpoint path and first 500 chars of the body at `tracing::error!` level
+- The `DeserializationError` variant must include `endpoint`, `message`, and `body_preview` fields
+- Never let a raw `serde_json::Error` propagate without endpoint context — use `ClickUpError::deserialization()` helper
+
 ## Acceptance
 
 - ClickUpClient handles HTTP 401 → `ClickUpError::AuthError`
