@@ -1,6 +1,6 @@
 use crate::client::ClickUpClient;
 use crate::error::Result;
-use crate::models::{Comment, CommentsResponse, CreateCommentRequest};
+use crate::models::{Comment, CommentsResponse, CreateCommentRequest, UpdateCommentRequest};
 
 impl ClickUpClient {
     /// Returns all comments on a task.
@@ -37,6 +37,22 @@ impl ClickUpClient {
         tracing::debug!(%comment_id, "creating comment reply");
         self.post(&format!("/comment/{comment_id}/reply"), request)
             .await
+    }
+
+    /// Updates an existing comment's text, assignee, or resolved status.
+    pub async fn update_comment(
+        &self,
+        comment_id: &str,
+        request: &UpdateCommentRequest,
+    ) -> Result<Comment> {
+        tracing::debug!(%comment_id, "updating comment");
+        self.put(&format!("/comment/{comment_id}"), request).await
+    }
+
+    /// Deletes a comment permanently.
+    pub async fn delete_comment(&self, comment_id: &str) -> Result<()> {
+        tracing::debug!(%comment_id, "deleting comment");
+        self.delete(&format!("/comment/{comment_id}")).await
     }
 }
 
@@ -202,5 +218,104 @@ mod tests {
         assert_eq!(reply.comment_text, "Replying here");
         assert_eq!(reply.parent.as_deref(), Some("c1"));
         assert_eq!(reply.user.as_ref().unwrap().username, "eve");
+    }
+
+    #[tokio::test]
+    async fn test_update_comment() {
+        let server = MockServer::start().await;
+        Mock::given(method("PUT"))
+            .and(path("/api/v2/comment/c1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "id": "c1",
+                "comment_text": "Updated text",
+                "user": {
+                    "id": 1,
+                    "username": "alice",
+                    "email": "alice@example.com"
+                },
+                "date": "1710000000000",
+                "resolved": false
+            })))
+            .mount(&server)
+            .await;
+
+        let client =
+            ClickUpClient::with_base_url("pk_test".into(), format!("{}/api/v2", server.uri()));
+
+        let request = crate::models::UpdateCommentRequest {
+            comment_text: "Updated text".to_string(),
+            assignee: None,
+            resolved: None,
+        };
+        let comment = client.update_comment("c1", &request).await.unwrap();
+        assert_eq!(comment.id, "c1");
+        assert_eq!(comment.comment_text, "Updated text");
+        assert_eq!(comment.user.as_ref().unwrap().username, "alice");
+    }
+
+    #[tokio::test]
+    async fn test_update_comment_with_resolved() {
+        let server = MockServer::start().await;
+        Mock::given(method("PUT"))
+            .and(path("/api/v2/comment/c5"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "id": "c5",
+                "comment_text": "Resolved now",
+                "resolved": true,
+                "date": "1710500000000"
+            })))
+            .mount(&server)
+            .await;
+
+        let client =
+            ClickUpClient::with_base_url("pk_test".into(), format!("{}/api/v2", server.uri()));
+
+        let request = crate::models::UpdateCommentRequest {
+            comment_text: "Resolved now".to_string(),
+            assignee: None,
+            resolved: Some(true),
+        };
+        let comment = client.update_comment("c5", &request).await.unwrap();
+        assert_eq!(comment.id, "c5");
+        assert_eq!(comment.resolved, Some(true));
+    }
+
+    #[tokio::test]
+    async fn test_delete_comment() {
+        let server = MockServer::start().await;
+        Mock::given(method("DELETE"))
+            .and(path("/api/v2/comment/c1"))
+            .respond_with(ResponseTemplate::new(200))
+            .mount(&server)
+            .await;
+
+        let client =
+            ClickUpClient::with_base_url("pk_test".into(), format!("{}/api/v2", server.uri()));
+
+        client.delete_comment("c1").await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_delete_comment_not_found() {
+        let server = MockServer::start().await;
+        Mock::given(method("DELETE"))
+            .and(path("/api/v2/comment/nonexistent"))
+            .respond_with(ResponseTemplate::new(404).set_body_json(serde_json::json!({
+                "err": "Comment not found",
+                "ECODE": "COMMENT_015"
+            })))
+            .mount(&server)
+            .await;
+
+        let client =
+            ClickUpClient::with_base_url("pk_test".into(), format!("{}/api/v2", server.uri()));
+
+        let err = client.delete_comment("nonexistent").await.unwrap_err();
+        match err {
+            crate::error::ClickUpError::NotFound(msg) => {
+                assert_eq!(msg, "Comment not found");
+            }
+            other => panic!("expected NotFound, got: {other:?}"),
+        }
     }
 }

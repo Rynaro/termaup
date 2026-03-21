@@ -225,6 +225,7 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
 fn render_input_area(app: &App, frame: &mut Frame, area: Rect) {
     let prompt = match &app.comment_input_mode {
         CommentInputMode::NewComment => "New comment:".to_string(),
+        CommentInputMode::EditComment => "Edit comment:".to_string(),
         CommentInputMode::Reply => {
             if let Some(ref target_id) = app.reply_target_id {
                 let username = app
@@ -345,4 +346,51 @@ fn format_relative_date(timestamp_ms: &str) -> String {
     } else {
         dt.format("%b %d, %Y").to_string()
     }
+}
+
+/// Renders the delete confirmation overlay on top of the sidebar.
+pub fn render_delete_confirm(frame: &mut Frame, area: Rect) {
+    let popup_width = 36_u16.min(area.width.saturating_sub(4));
+    let popup_height = 5_u16.min(area.height.saturating_sub(2));
+    let x = area.x + (area.width.saturating_sub(popup_width)) / 2;
+    let y = area.y + (area.height.saturating_sub(popup_height)) / 2;
+    let popup_area = Rect::new(x, y, popup_width, popup_height);
+
+    // Clear the area behind the popup.
+    let clear = ratatui::widgets::Clear;
+    frame.render_widget(clear, popup_area);
+
+    let block = Block::default()
+        .title(" Confirm Delete ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::Red));
+
+    let inner = block.inner(popup_area);
+    frame.render_widget(block, popup_area);
+
+    let lines = vec![
+        Line::from(Span::styled(
+            "Delete this comment?",
+            Style::default().fg(THEME.fg).add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(
+                "y",
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(":confirm  ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                "n",
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(":cancel", Style::default().fg(Color::DarkGray)),
+        ]),
+    ];
+
+    let paragraph = Paragraph::new(lines).alignment(ratatui::layout::Alignment::Center);
+    frame.render_widget(paragraph, inner);
 }

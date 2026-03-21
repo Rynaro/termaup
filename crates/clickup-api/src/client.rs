@@ -99,6 +99,34 @@ impl ClickUpClient {
         self.handle_response(response, &url).await
     }
 
+    /// Performs a PUT request with a JSON body and deserializes the response.
+    pub async fn put<T: DeserializeOwned, B: Serialize + Send>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<T> {
+        self.rate_limiter.lock().await.check_and_wait().await;
+
+        let url = format!("{}{}", self.base_url, path);
+        tracing::debug!(%url, "PUT request");
+
+        let response = self.http.put(&url).json(body).send().await?;
+
+        self.handle_response(response, &url).await
+    }
+
+    /// Performs a DELETE request that expects no response body.
+    pub async fn delete(&self, path: &str) -> Result<()> {
+        self.rate_limiter.lock().await.check_and_wait().await;
+
+        let url = format!("{}{}", self.base_url, path);
+        tracing::debug!(%url, "DELETE request");
+
+        let response = self.http.delete(&url).send().await?;
+
+        self.handle_response_no_body(response, &url).await
+    }
+
     /// Fetches all pages of a paginated endpoint, collecting items into a
     /// single `Vec`.
     ///
@@ -239,6 +267,52 @@ impl ClickUpClient {
             status: status_code,
             message,
         })
+    }
+
+    /// Processes an HTTP response that returns no body on success, mapping
+    /// non-success status codes to error variants.
+    async fn handle_response_no_body(
+        &self,
+        response: reqwest::Response,
+        endpoint: &str,
+    ) -> Result<()> {
+        // Update rate limiter from headers.
+        if let (Some(remaining), Some(reset)) = (
+            response
+                .headers()
+                .get("X-RateLimit-Remaining")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.parse::<u64>().ok()),
+            response
+                .headers()
+                .get("X-RateLimit-Reset")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.parse::<u64>().ok()),
+        ) {
+            self.rate_limiter
+                .lock()
+                .await
+                .update_from_headers(remaining, reset);
+        }
+
+        let status = response.status();
+        tracing::debug!(%status, "response received");
+
+        if status.is_success() {
+            return Ok(());
+        }
+
+        // Reuse the same error-handling logic via handle_response with a
+        // permissive type — this path only runs for non-success responses
+        // where the body is always an error JSON.
+        let err: std::result::Result<serde_json::Value, _> =
+            self.handle_response(response, endpoint).await;
+        match err {
+            Err(e) => Err(e),
+            // Should not happen since status is not success, but handle
+            // gracefully.
+            Ok(_) => Ok(()),
+        }
     }
 }
 
@@ -491,5 +565,109 @@ mod tests {
 
         let limiter = client.rate_limiter.lock().await;
         assert_eq!(limiter.remaining(), 42);
+    }
+
+    #[tokio::test]
+    async fn test_put_success() {
+        let server = MockServer::start().await;
+        Mock::given(method("PUT"))
+            .and(path("/api/v2/comment/c1"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"id": "c1", "comment_text": "updated"})),
+            )
+            .mount(&server)
+            .await;
+
+        let client = test_client(&format!("{}/api/v2", server.uri())).await;
+        let body = serde_json::json!({"comment_text": "updated"});
+        let result: serde_json::Value = client.put("/comment/c1", &body).await.unwrap();
+        assert_eq!(result["id"], "c1");
+        assert_eq!(result["comment_text"], "updated");
+    }
+
+    #[tokio::test]
+    async fn test_put_404_returns_not_found() {
+        let server = MockServer::start().await;
+        Mock::given(method("PUT"))
+            .and(path("/api/v2/comment/nonexistent"))
+            .respond_with(ResponseTemplate::new(404).set_body_json(
+                serde_json::json!({"err": "Comment not found", "ECODE": "COMMENT_015"}),
+            ))
+            .mount(&server)
+            .await;
+
+        let client = test_client(&format!("{}/api/v2", server.uri())).await;
+        let body = serde_json::json!({"comment_text": "updated"});
+        let err = client
+            .put::<serde_json::Value, _>("/comment/nonexistent", &body)
+            .await
+            .unwrap_err();
+
+        match err {
+            ClickUpError::NotFound(msg) => {
+                assert_eq!(msg, "Comment not found");
+            }
+            other => panic!("expected NotFound, got: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_delete_success() {
+        let server = MockServer::start().await;
+        Mock::given(method("DELETE"))
+            .and(path("/api/v2/comment/c1"))
+            .respond_with(ResponseTemplate::new(200))
+            .mount(&server)
+            .await;
+
+        let client = test_client(&format!("{}/api/v2", server.uri())).await;
+        client.delete("/comment/c1").await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_delete_404_returns_not_found() {
+        let server = MockServer::start().await;
+        Mock::given(method("DELETE"))
+            .and(path("/api/v2/comment/nonexistent"))
+            .respond_with(ResponseTemplate::new(404).set_body_json(
+                serde_json::json!({"err": "Comment not found", "ECODE": "COMMENT_015"}),
+            ))
+            .mount(&server)
+            .await;
+
+        let client = test_client(&format!("{}/api/v2", server.uri())).await;
+        let err = client.delete("/comment/nonexistent").await.unwrap_err();
+
+        match err {
+            ClickUpError::NotFound(msg) => {
+                assert_eq!(msg, "Comment not found");
+            }
+            other => panic!("expected NotFound, got: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_delete_401_returns_auth_error() {
+        let server = MockServer::start().await;
+        Mock::given(method("DELETE"))
+            .and(path("/api/v2/comment/c1"))
+            .respond_with(
+                ResponseTemplate::new(401).set_body_json(
+                    serde_json::json!({"err": "Token invalid", "ECODE": "OAUTH_025"}),
+                ),
+            )
+            .mount(&server)
+            .await;
+
+        let client = test_client(&format!("{}/api/v2", server.uri())).await;
+        let err = client.delete("/comment/c1").await.unwrap_err();
+
+        match err {
+            ClickUpError::AuthError(msg) => {
+                assert_eq!(msg, "Token invalid");
+            }
+            other => panic!("expected AuthError, got: {other:?}"),
+        }
     }
 }

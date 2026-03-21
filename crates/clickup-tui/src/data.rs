@@ -247,6 +247,70 @@ pub fn spawn_create_comment_reply(
     });
 }
 
+/// Updates an existing comment's text and sends the result.
+pub fn spawn_update_comment(
+    client: &ClickUpClient,
+    tx: &mpsc::UnboundedSender<AppEvent>,
+    comment_id: &str,
+    new_text: &str,
+) {
+    let client = client.clone();
+    let tx = tx.clone();
+    let comment_id = comment_id.to_string();
+    let new_text = new_text.to_string();
+    tokio::spawn(async move {
+        tracing::debug!(%comment_id, "updating comment");
+        let request = clickup_api::models::UpdateCommentRequest {
+            comment_text: new_text.clone(),
+            assignee: None,
+            resolved: None,
+        };
+        match client.update_comment(&comment_id, &request).await {
+            Ok(mut comment) => {
+                // The PUT response may be sparse — backfill the text we submitted.
+                if comment.comment_text.is_empty() {
+                    comment.comment_text = new_text;
+                }
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::CommentUpdated(
+                    Box::new(comment),
+                ))));
+            }
+            Err(e) => {
+                let _ = tx.send(AppEvent::Error(format!("Failed to update comment: {e}")));
+            }
+        }
+    });
+}
+
+/// Deletes a comment and sends the result.
+pub fn spawn_delete_comment(
+    client: &ClickUpClient,
+    tx: &mpsc::UnboundedSender<AppEvent>,
+    comment_id: &str,
+    parent_comment_id: Option<&str>,
+) {
+    let client = client.clone();
+    let tx = tx.clone();
+    let comment_id = comment_id.to_string();
+    let parent_comment_id = parent_comment_id.map(|s| s.to_string());
+    tokio::spawn(async move {
+        tracing::debug!(%comment_id, "deleting comment");
+        match client.delete_comment(&comment_id).await {
+            Ok(()) => {
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(
+                    DataPayload::CommentDeleted {
+                        comment_id,
+                        parent_comment_id,
+                    },
+                )));
+            }
+            Err(e) => {
+                let _ = tx.send(AppEvent::Error(format!("Failed to delete comment: {e}")));
+            }
+        }
+    });
+}
+
 /// Loads a single page of tasks with optional filters.
 pub fn spawn_load_tasks_page(
     client: &ClickUpClient,

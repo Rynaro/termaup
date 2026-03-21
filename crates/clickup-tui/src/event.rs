@@ -52,6 +52,15 @@ pub enum DataPayload {
         /// The newly created reply.
         reply: Box<Comment>,
     },
+    /// A comment was successfully updated.
+    CommentUpdated(Box<Comment>),
+    /// A comment was successfully deleted.
+    CommentDeleted {
+        /// The deleted comment's ID.
+        comment_id: String,
+        /// If the deleted comment was a reply, the parent comment ID.
+        parent_comment_id: Option<String>,
+    },
     /// A single page of tasks loaded (for progressive pagination).
     TasksPage {
         /// Tasks on this page.

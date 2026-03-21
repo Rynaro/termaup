@@ -44,6 +44,25 @@ pub enum CommentInputMode {
     NewComment,
     /// Replying to a specific comment.
     Reply,
+    /// Editing an existing comment.
+    EditComment,
+}
+
+/// Represents a single visible item in the flat comment navigation list.
+#[derive(Debug, Clone)]
+pub enum CommentItem {
+    /// A top-level comment (index into `App::comments`).
+    TopLevel {
+        /// Index into `App::comments`.
+        index: usize,
+    },
+    /// A reply within an expanded thread.
+    Reply {
+        /// Index of the parent in `App::comments`.
+        parent_index: usize,
+        /// Index into the reply list for this parent.
+        reply_index: usize,
+    },
 }
 
 impl ViewMode {
@@ -215,6 +234,12 @@ pub struct App {
     pub comment_scroll_offset: u16,
     /// Comment ID being replied to (when in Reply mode).
     pub reply_target_id: Option<String>,
+    /// Comment ID currently being edited (when in EditComment mode).
+    pub editing_comment_id: Option<String>,
+    /// Comment ID pending delete confirmation.
+    pub delete_confirm_target: Option<String>,
+    /// Parent comment ID of the delete target (if it's a reply).
+    pub delete_confirm_parent: Option<String>,
 
     // --- UI state ---
     /// Error message to display (auto-dismisses).
@@ -288,6 +313,9 @@ impl App {
             comment_replies: HashMap::new(),
             comment_scroll_offset: 0,
             reply_target_id: None,
+            editing_comment_id: None,
+            delete_confirm_target: None,
+            delete_confirm_parent: None,
             error_message: None,
             error_set_at: None,
             loading: false,
@@ -599,6 +627,9 @@ impl App {
         self.comment_replies.clear();
         self.comment_scroll_offset = 0;
         self.reply_target_id = None;
+        self.editing_comment_id = None;
+        self.delete_confirm_target = None;
+        self.delete_confirm_parent = None;
     }
 
     /// Toggles the comment sidebar visibility.
@@ -608,6 +639,66 @@ impl App {
             self.comment_input_mode = CommentInputMode::Browse;
             self.comment_input_text.clear();
             self.reply_target_id = None;
+            self.editing_comment_id = None;
+            self.delete_confirm_target = None;
+            self.delete_confirm_parent = None;
+        }
+    }
+
+    /// Builds the flat list of visible comment items for navigation.
+    ///
+    /// The list contains top-level comments interleaved with their expanded
+    /// replies, giving a linear selection model.
+    pub fn visible_comment_items(&self) -> Vec<CommentItem> {
+        let mut items = Vec::new();
+        for (i, comment) in self.comments.iter().enumerate() {
+            items.push(CommentItem::TopLevel { index: i });
+            if self.expanded_comments.contains(&comment.id)
+                && let Some(replies) = self.comment_replies.get(&comment.id)
+            {
+                for (ri, _) in replies.iter().enumerate() {
+                    items.push(CommentItem::Reply {
+                        parent_index: i,
+                        reply_index: ri,
+                    });
+                }
+            }
+        }
+        items
+    }
+
+    /// Resolves a `CommentItem` to a reference to the underlying `Comment`.
+    pub fn resolve_comment_item<'a>(&'a self, item: &CommentItem) -> Option<&'a Comment> {
+        match item {
+            CommentItem::TopLevel { index } => self.comments.get(*index),
+            CommentItem::Reply {
+                parent_index,
+                reply_index,
+            } => {
+                let parent = self.comments.get(*parent_index)?;
+                self.comment_replies
+                    .get(&parent.id)
+                    .and_then(|replies| replies.get(*reply_index))
+            }
+        }
+    }
+
+    /// Returns the parent comment ID for a `CommentItem::Reply`, or `None`
+    /// for top-level items.
+    pub fn parent_id_for_item(&self, item: &CommentItem) -> Option<String> {
+        match item {
+            CommentItem::TopLevel { .. } => None,
+            CommentItem::Reply { parent_index, .. } => {
+                self.comments.get(*parent_index).map(|c| c.id.clone())
+            }
+        }
+    }
+
+    /// Returns whether the given comment belongs to the current user.
+    pub fn is_own_comment(&self, comment: &Comment) -> bool {
+        match (&self.current_user, &comment.user) {
+            (Some(me), Some(author)) => me.id == author.id,
+            _ => false,
         }
     }
 }
