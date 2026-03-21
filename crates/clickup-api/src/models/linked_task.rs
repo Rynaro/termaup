@@ -151,4 +151,25 @@ mod tests {
         assert_eq!(dep.depends_on, "200");
         assert_eq!(dep.dependency_type, Some(0));
     }
+
+    #[test]
+    fn test_deserialize_task_dependency_with_null_optional_fields() {
+        let json = serde_json::json!({
+            "task_id": "task_x",
+            "depends_on": "task_y",
+            "type": null,
+            "date_created": null,
+            "userid": null,
+            "workspace_id": null
+        });
+
+        let dep: TaskDependency =
+            serde_json::from_value(json).expect("deserialize dependency with null fields");
+        assert_eq!(dep.task_id, "task_x");
+        assert_eq!(dep.depends_on, "task_y");
+        assert!(dep.dependency_type.is_none());
+        assert!(dep.date_created.is_none());
+        assert!(dep.userid.is_none());
+        assert!(dep.workspace_id.is_none());
+    }
 }

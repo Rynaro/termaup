@@ -17,7 +17,7 @@ pub enum AppEvent {
     #[allow(dead_code)]
     Resize(u16, u16),
     /// Data loaded from the API.
-    DataLoaded(DataPayload),
+    DataLoaded(Box<DataPayload>),
     /// An error occurred during data loading.
     Error(String),
 }
@@ -36,6 +36,22 @@ pub enum DataPayload {
     TaskDetail(Box<Task>),
     /// Comments loaded for a task.
     Comments(Vec<Comment>),
+    /// A new comment was successfully created.
+    CommentCreated(Box<Comment>),
+    /// Threaded replies loaded for a comment.
+    CommentReplies {
+        /// The parent comment ID.
+        comment_id: String,
+        /// The reply comments.
+        replies: Vec<Comment>,
+    },
+    /// A reply was successfully created on a comment thread.
+    ReplyCreated {
+        /// The parent comment ID.
+        parent_comment_id: String,
+        /// The newly created reply.
+        reply: Box<Comment>,
+    },
     /// A single page of tasks loaded (for progressive pagination).
     TasksPage {
         /// Tasks on this page.

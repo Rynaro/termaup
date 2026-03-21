@@ -46,3 +46,87 @@ pub struct FoldersResponse {
     /// List of folders.
     pub folders: Vec<Folder>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deserialize_folder_full() {
+        let json = serde_json::json!({
+            "id": "f1",
+            "name": "Sprint 1",
+            "orderindex": 0,
+            "hidden": false,
+            "space": { "id": "s1", "name": "Engineering" },
+            "task_count": "42",
+            "lists": [
+                {
+                    "id": "l1",
+                    "name": "Backlog"
+                }
+            ]
+        });
+
+        let folder: Folder = serde_json::from_value(json).expect("deserialize folder");
+        assert_eq!(folder.id, "f1");
+        assert_eq!(folder.name, "Sprint 1");
+        assert_eq!(folder.orderindex, 0);
+        assert!(!folder.hidden);
+        assert_eq!(folder.space.id, "s1");
+        assert_eq!(folder.space.name.as_deref(), Some("Engineering"));
+        assert_eq!(folder.task_count.as_deref(), Some("42"));
+        assert_eq!(folder.lists.len(), 1);
+        assert_eq!(folder.lists[0].name, "Backlog");
+    }
+
+    #[test]
+    fn test_deserialize_folder_minimal() {
+        let json = serde_json::json!({
+            "id": "f2",
+            "name": "Empty",
+            "space": { "id": "s1" }
+        });
+
+        let folder: Folder = serde_json::from_value(json).expect("deserialize minimal folder");
+        assert_eq!(folder.id, "f2");
+        assert_eq!(folder.name, "Empty");
+        assert_eq!(folder.orderindex, 0);
+        assert!(!folder.hidden);
+        assert!(folder.space.name.is_none());
+        assert!(folder.task_count.is_none());
+        assert!(folder.lists.is_empty());
+    }
+
+    #[test]
+    fn test_deserialize_folder_numeric_ids() {
+        let json = serde_json::json!({
+            "id": 100,
+            "name": "Numeric",
+            "space": { "id": 200 },
+            "task_count": 5
+        });
+
+        let folder: Folder =
+            serde_json::from_value(json).expect("deserialize folder with numeric ids");
+        assert_eq!(folder.id, "100");
+        assert_eq!(folder.space.id, "200");
+        assert_eq!(folder.task_count.as_deref(), Some("5"));
+    }
+
+    #[test]
+    fn test_deserialize_folders_response() {
+        let json = serde_json::json!({
+            "folders": [
+                { "id": "f1", "name": "A", "space": { "id": "s1" } },
+                { "id": "f2", "name": "B", "space": { "id": "s1" } }
+            ]
+        });
+
+        let resp: FoldersResponse =
+            serde_json::from_value(json).expect("deserialize folders response");
+        assert_eq!(resp.folders.len(), 2);
+        assert_eq!(resp.folders[0].name, "A");
+        assert_eq!(resp.folders[1].name, "B");
+    }
+}

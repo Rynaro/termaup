@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::user::User;
-use crate::serde_helpers::deserialize_string_or_number;
+use crate::serde_helpers::{deserialize_default_string_or_number, deserialize_string_or_number};
 
 /// A comment on a ClickUp task.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -16,7 +16,7 @@ pub struct Comment {
     #[serde(default)]
     pub user: Option<User>,
     /// Timestamp (milliseconds).
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_default_string_or_number")]
     pub date: String,
     /// Number of replies to this comment.
     #[serde(default)]
@@ -179,6 +179,20 @@ mod tests {
             serde_json::from_value(json).expect("deserialize comment with integer id");
         assert_eq!(comment.id, "90170193899");
         assert_eq!(comment.comment_text, "Created via API");
+    }
+
+    #[test]
+    fn test_deserialize_comment_integer_date() {
+        let json = serde_json::json!({
+            "id": "c20",
+            "comment_text": "Just created",
+            "date": 1773955968
+        });
+
+        let comment: Comment =
+            serde_json::from_value(json).expect("deserialize comment with integer date");
+        assert_eq!(comment.id, "c20");
+        assert_eq!(comment.date, "1773955968");
     }
 
     #[test]

@@ -201,9 +201,7 @@ where
 }
 
 /// Deserializes an optional boolean that may arrive as an integer (`0`/`1`) or `null`.
-pub fn deserialize_option_bool_or_int<'de, D>(
-    deserializer: D,
-) -> Result<Option<bool>, D::Error>
+pub fn deserialize_option_bool_or_int<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -211,13 +209,59 @@ where
     match &value {
         serde_json::Value::Null => Ok(None),
         serde_json::Value::Bool(b) => Ok(Some(*b)),
-        serde_json::Value::Number(n) => {
-            Ok(Some(n.as_i64().map(|v| v != 0).unwrap_or(false)))
-        }
+        serde_json::Value::Number(n) => Ok(Some(n.as_i64().map(|v| v != 0).unwrap_or(false))),
         _ => Err(de::Error::custom(format!(
             "expected bool or integer, got {value}"
         ))),
     }
+}
+
+/// Deserializes a value that may be a string, number, or null into a `String`, defaulting to `""`.
+///
+/// Like `deserialize_string_or_number` but also handles `null` and absent values.
+pub fn deserialize_default_string_or_number<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct DefaultStringOrNumber;
+
+    impl<'de> de::Visitor<'de> for DefaultStringOrNumber {
+        type Value = String;
+
+        fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            f.write_str("a string, a number, or null")
+        }
+
+        fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+            Ok(v.to_owned())
+        }
+
+        fn visit_string<E: de::Error>(self, v: String) -> Result<Self::Value, E> {
+            Ok(v)
+        }
+
+        fn visit_i64<E: de::Error>(self, v: i64) -> Result<Self::Value, E> {
+            Ok(v.to_string())
+        }
+
+        fn visit_u64<E: de::Error>(self, v: u64) -> Result<Self::Value, E> {
+            Ok(v.to_string())
+        }
+
+        fn visit_f64<E: de::Error>(self, v: f64) -> Result<Self::Value, E> {
+            Ok(v.to_string())
+        }
+
+        fn visit_none<E: de::Error>(self) -> Result<Self::Value, E> {
+            Ok(String::new())
+        }
+
+        fn visit_unit<E: de::Error>(self) -> Result<Self::Value, E> {
+            Ok(String::new())
+        }
+    }
+
+    deserializer.deserialize_any(DefaultStringOrNumber)
 }
 
 /// Deserializes a value that may be `null` or absent as `Default::default()`.
@@ -423,6 +467,36 @@ mod tests {
         assert!(v.value.is_none(), "absent field should default to None");
     }
 
+    #[derive(Deserialize)]
+    struct TestDefaultStringOrNumber {
+        #[serde(default, deserialize_with = "deserialize_default_string_or_number")]
+        value: String,
+    }
+
+    #[test]
+    fn test_default_string_or_number_from_string() {
+        let v: TestDefaultStringOrNumber = serde_json::from_str(r#"{"value":"hello"}"#).unwrap();
+        assert_eq!(v.value, "hello");
+    }
+
+    #[test]
+    fn test_default_string_or_number_from_integer() {
+        let v: TestDefaultStringOrNumber = serde_json::from_str(r#"{"value":42}"#).unwrap();
+        assert_eq!(v.value, "42");
+    }
+
+    #[test]
+    fn test_default_string_or_number_from_null() {
+        let v: TestDefaultStringOrNumber = serde_json::from_str(r#"{"value":null}"#).unwrap();
+        assert_eq!(v.value, "");
+    }
+
+    #[test]
+    fn test_default_string_or_number_absent() {
+        let v: TestDefaultStringOrNumber = serde_json::from_str(r#"{}"#).unwrap();
+        assert_eq!(v.value, "");
+    }
+
     #[test]
     fn test_null_as_default_vec_null() {
         #[derive(Deserialize)]
@@ -488,10 +562,7 @@ mod tests {
 
     #[derive(Deserialize)]
     struct TestOptionBoolOrInt {
-        #[serde(
-            default,
-            deserialize_with = "super::deserialize_option_bool_or_int"
-        )]
+        #[serde(default, deserialize_with = "super::deserialize_option_bool_or_int")]
         value: Option<bool>,
     }
 
@@ -503,8 +574,7 @@ mod tests {
 
     #[test]
     fn test_option_bool_or_int_from_null() {
-        let v: TestOptionBoolOrInt =
-            serde_json::from_str(r#"{"value":null}"#).unwrap();
+        let v: TestOptionBoolOrInt = serde_json::from_str(r#"{"value":null}"#).unwrap();
         assert_eq!(v.value, None);
     }
 

@@ -12,7 +12,7 @@ pub fn spawn_load_workspaces(client: &ClickUpClient, tx: &mpsc::UnboundedSender<
         tracing::debug!("loading workspaces");
         match client.get_workspaces().await {
             Ok(ws) => {
-                let _ = tx.send(AppEvent::DataLoaded(DataPayload::Workspaces(ws)));
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::Workspaces(ws))));
             }
             Err(e) => {
                 let _ = tx.send(AppEvent::Error(format!("Failed to load workspaces: {e}")));
@@ -34,7 +34,7 @@ pub fn spawn_load_spaces(
         tracing::debug!(%team_id, "loading spaces");
         match client.get_spaces(&team_id).await {
             Ok(spaces) => {
-                let _ = tx.send(AppEvent::DataLoaded(DataPayload::Spaces(spaces)));
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::Spaces(spaces))));
             }
             Err(e) => {
                 let _ = tx.send(AppEvent::Error(format!("Failed to load spaces: {e}")));
@@ -74,9 +74,8 @@ pub fn spawn_load_folders_and_lists(
             }
         }
 
-        let _ = tx.send(AppEvent::DataLoaded(DataPayload::FoldersAndLists(
-            folders,
-            folderless_lists,
+        let _ = tx.send(AppEvent::DataLoaded(Box::new(
+            DataPayload::FoldersAndLists(folders, folderless_lists),
         )));
     });
 }
@@ -94,7 +93,7 @@ pub fn spawn_load_tasks(
         tracing::debug!(%list_id, "loading tasks");
         match client.get_tasks(&list_id).await {
             Ok(tasks) => {
-                let _ = tx.send(AppEvent::DataLoaded(DataPayload::Tasks(tasks)));
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::Tasks(tasks))));
             }
             Err(e) => {
                 let _ = tx.send(AppEvent::Error(format!("Failed to load tasks: {e}")));
@@ -116,8 +115,8 @@ pub fn spawn_load_task_detail(
         tracing::debug!(%task_id, "loading task detail");
         match client.get_task(&task_id).await {
             Ok(task) => {
-                let _ = tx.send(AppEvent::DataLoaded(DataPayload::TaskDetail(Box::new(
-                    task,
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::TaskDetail(
+                    Box::new(task),
                 ))));
             }
             Err(e) => {
@@ -140,10 +139,109 @@ pub fn spawn_load_comments(
         tracing::debug!(%task_id, "loading comments");
         match client.get_task_comments(&task_id).await {
             Ok(comments) => {
-                let _ = tx.send(AppEvent::DataLoaded(DataPayload::Comments(comments)));
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::Comments(
+                    comments,
+                ))));
             }
             Err(e) => {
                 tracing::warn!("failed to load comments: {e}");
+            }
+        }
+    });
+}
+
+/// Creates a new comment on a task and sends the result.
+pub fn spawn_create_comment(
+    client: &ClickUpClient,
+    tx: &mpsc::UnboundedSender<AppEvent>,
+    task_id: &str,
+    comment_text: &str,
+) {
+    let client = client.clone();
+    let tx = tx.clone();
+    let task_id = task_id.to_string();
+    let comment_text = comment_text.to_string();
+    tokio::spawn(async move {
+        tracing::debug!(%task_id, "creating comment");
+        let request = clickup_api::models::CreateCommentRequest {
+            comment_text: comment_text.clone(),
+            notify_all: Some(true),
+        };
+        match client.create_task_comment(&task_id, &request).await {
+            Ok(mut comment) => {
+                // The POST response is sparse — backfill the text we submitted
+                // when the API omits it.
+                if comment.comment_text.is_empty() {
+                    comment.comment_text = comment_text;
+                }
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::CommentCreated(
+                    Box::new(comment),
+                ))));
+            }
+            Err(e) => {
+                let _ = tx.send(AppEvent::Error(format!("Failed to create comment: {e}")));
+            }
+        }
+    });
+}
+
+/// Loads threaded replies for a comment and sends the result.
+pub fn spawn_load_comment_replies(
+    client: &ClickUpClient,
+    tx: &mpsc::UnboundedSender<AppEvent>,
+    comment_id: &str,
+) {
+    let client = client.clone();
+    let tx = tx.clone();
+    let comment_id = comment_id.to_string();
+    tokio::spawn(async move {
+        tracing::debug!(%comment_id, "loading comment replies");
+        match client.get_comment_replies(&comment_id).await {
+            Ok(replies) => {
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(
+                    DataPayload::CommentReplies {
+                        comment_id,
+                        replies,
+                    },
+                )));
+            }
+            Err(e) => {
+                tracing::warn!("failed to load replies for {comment_id}: {e}");
+                let _ = tx.send(AppEvent::Error(format!("Failed to load replies: {e}")));
+            }
+        }
+    });
+}
+
+/// Creates a threaded reply on a comment and sends the result.
+pub fn spawn_create_comment_reply(
+    client: &ClickUpClient,
+    tx: &mpsc::UnboundedSender<AppEvent>,
+    comment_id: &str,
+    comment_text: &str,
+) {
+    let client = client.clone();
+    let tx = tx.clone();
+    let comment_id = comment_id.to_string();
+    let comment_text = comment_text.to_string();
+    tokio::spawn(async move {
+        tracing::debug!(%comment_id, "creating comment reply");
+        let request = clickup_api::models::CreateCommentRequest {
+            comment_text: comment_text.clone(),
+            notify_all: Some(true),
+        };
+        match client.create_comment_reply(&comment_id, &request).await {
+            Ok(mut reply) => {
+                if reply.comment_text.is_empty() {
+                    reply.comment_text = comment_text;
+                }
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::ReplyCreated {
+                    parent_comment_id: comment_id,
+                    reply: Box::new(reply),
+                })));
+            }
+            Err(e) => {
+                let _ = tx.send(AppEvent::Error(format!("Failed to create reply: {e}")));
             }
         }
     });
@@ -173,11 +271,11 @@ pub fn spawn_load_tasks_page(
             .await
         {
             Ok(paginated) => {
-                let _ = tx.send(AppEvent::DataLoaded(DataPayload::TasksPage {
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::TasksPage {
                     tasks: paginated.data,
                     page,
                     last_page: paginated.last_page,
-                }));
+                })));
             }
             Err(e) => {
                 let _ = tx.send(AppEvent::Error(format!("Failed to load tasks: {e}")));
@@ -194,7 +292,9 @@ pub fn spawn_load_current_user(client: &ClickUpClient, tx: &mpsc::UnboundedSende
         tracing::debug!("loading current user");
         match client.get_authenticated_user().await {
             Ok(user) => {
-                let _ = tx.send(AppEvent::DataLoaded(DataPayload::CurrentUser(user)));
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::CurrentUser(
+                    user,
+                ))));
             }
             Err(e) => {
                 tracing::warn!("failed to load current user: {e}");

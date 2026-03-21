@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::user::User;
-use crate::serde_helpers::{deserialize_option_string_or_number, deserialize_string_or_number};
+use crate::serde_helpers::deserialize_option_string_or_number;
 
 /// A ClickUp task.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,6 +20,10 @@ pub struct Task {
     #[serde(default)]
     pub text_content: Option<String>,
     /// Current status.
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_null_as_default"
+    )]
     pub status: TaskStatus,
     /// Display order.
     #[serde(default)]
@@ -36,8 +40,9 @@ pub struct Task {
     /// Done timestamp (milliseconds), if done.
     #[serde(default)]
     pub date_done: Option<String>,
-    /// The user who created the task.
-    pub creator: User,
+    /// The user who created the task (absent on some task variants).
+    #[serde(default)]
+    pub creator: Option<User>,
     /// Assigned users.
     #[serde(
         default,
@@ -62,12 +67,15 @@ pub struct Task {
         deserialize_with = "crate::serde_helpers::deserialize_null_as_default"
     )]
     pub tags: Vec<Tag>,
-    /// Parent list reference.
-    pub list: TaskList,
-    /// Parent folder reference.
-    pub folder: TaskFolder,
-    /// Parent space reference.
-    pub space: TaskSpace,
+    /// Parent list reference (absent on TIML tasks and some search results).
+    #[serde(default)]
+    pub list: Option<TaskList>,
+    /// Parent folder reference (absent on TIML tasks and some search results).
+    #[serde(default)]
+    pub folder: Option<TaskFolder>,
+    /// Parent space reference (absent on TIML tasks and some search results).
+    #[serde(default)]
+    pub space: Option<TaskSpace>,
     /// Web URL for the task.
     #[serde(default)]
     pub url: String,
@@ -166,6 +174,16 @@ pub struct TaskStatus {
     pub status_type: String,
 }
 
+impl Default for TaskStatus {
+    fn default() -> Self {
+        Self {
+            status: "unknown".to_string(),
+            color: "#808080".to_string(),
+            status_type: "custom".to_string(),
+        }
+    }
+}
+
 /// Task priority.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskPriority {
@@ -194,10 +212,13 @@ pub struct Tag {
 }
 
 /// Minimal list reference embedded in a task.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TaskList {
     /// List ID.
-    #[serde(deserialize_with = "deserialize_string_or_number")]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_default_string_or_number"
+    )]
     pub id: String,
     /// List name.
     #[serde(default)]
@@ -205,10 +226,13 @@ pub struct TaskList {
 }
 
 /// Minimal folder reference embedded in a task.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TaskFolder {
     /// Folder ID.
-    #[serde(deserialize_with = "deserialize_string_or_number")]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_default_string_or_number"
+    )]
     pub id: String,
     /// Folder name.
     #[serde(default)]
@@ -216,10 +240,13 @@ pub struct TaskFolder {
 }
 
 /// Minimal space reference embedded in a task.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TaskSpace {
     /// Space ID.
-    #[serde(deserialize_with = "deserialize_string_or_number")]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_default_string_or_number"
+    )]
     pub id: String,
 }
 
@@ -324,7 +351,7 @@ mod tests {
         assert_eq!(task.name, "Implement login");
         assert_eq!(task.status.status, "in progress");
         assert_eq!(task.status.status_type, "custom");
-        assert_eq!(task.creator.username, "alice");
+        assert_eq!(task.creator.as_ref().unwrap().username, "alice");
         assert_eq!(task.assignees.len(), 1);
         assert_eq!(task.assignees[0].username, "bob");
 
@@ -333,9 +360,12 @@ mod tests {
 
         assert_eq!(task.tags.len(), 1);
         assert_eq!(task.tags[0].name, "frontend");
-        assert_eq!(task.list.id, "list_1");
-        assert_eq!(task.folder.name.as_deref(), Some("Product"));
-        assert_eq!(task.space.id, "space_1");
+        assert_eq!(task.list.as_ref().unwrap().id, "list_1");
+        assert_eq!(
+            task.folder.as_ref().unwrap().name.as_deref(),
+            Some("Product")
+        );
+        assert_eq!(task.space.as_ref().unwrap().id, "space_1");
         assert_eq!(
             task.markdown_description.as_deref(),
             Some("# Login\nBuild it.")
@@ -494,5 +524,74 @@ mod tests {
         assert!(task.dependencies.is_empty());
         assert!(task.watchers.is_empty());
         assert!(task.attachments.is_empty());
+    }
+
+    #[test]
+    fn test_deserialize_task_bare_minimum() {
+        let json = serde_json::json!({
+            "id": "t_bare",
+            "name": "Bare minimum task"
+        });
+
+        let task: Task =
+            serde_json::from_value(json).expect("bare minimum task should deserialize");
+        assert_eq!(task.id, "t_bare");
+        assert_eq!(task.name, "Bare minimum task");
+        assert_eq!(task.status.status, "unknown");
+        assert!(task.creator.is_none());
+        assert!(task.list.is_none());
+        assert!(task.folder.is_none());
+        assert!(task.space.is_none());
+        assert!(task.assignees.is_empty());
+        assert!(task.tags.is_empty());
+        assert!(task.priority.is_none());
+    }
+
+    #[test]
+    fn test_deserialize_timl_task_missing_structural_fields() {
+        let json = serde_json::json!({
+            "id": "t_timl",
+            "name": "TIML task from another list",
+            "status": {
+                "status": "in progress",
+                "color": "#4194f6",
+                "type": "custom"
+            },
+            "creator": {
+                "id": 1,
+                "username": "u",
+                "email": "u@x.com"
+            },
+            "assignees": [],
+            "tags": []
+        });
+
+        let task: Task = serde_json::from_value(json).expect("TIML task without list/folder/space");
+        assert_eq!(task.id, "t_timl");
+        assert!(task.list.is_none(), "TIML task should have no list");
+        assert!(task.folder.is_none(), "TIML task should have no folder");
+        assert!(task.space.is_none(), "TIML task should have no space");
+        assert!(task.creator.is_some());
+    }
+
+    #[test]
+    fn test_deserialize_task_null_structural_fields() {
+        let json = serde_json::json!({
+            "id": "t_null_struct",
+            "name": "Task with null structures",
+            "status": null,
+            "creator": null,
+            "list": null,
+            "folder": null,
+            "space": null
+        });
+
+        let task: Task =
+            serde_json::from_value(json).expect("null structural fields should deserialize");
+        assert_eq!(task.status.status, "unknown", "null status defaults");
+        assert!(task.creator.is_none());
+        assert!(task.list.is_none());
+        assert!(task.folder.is_none());
+        assert!(task.space.is_none());
     }
 }

@@ -1,3 +1,4 @@
+pub mod comment_sidebar;
 pub mod filter_panel;
 pub mod help;
 pub mod layout;
@@ -212,7 +213,16 @@ fn render_screen(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) {
             ViewMode::VisionBoard => vision_board::render(app, frame, area),
         },
         Screen::TaskDetail => {
-            task_detail::render(app, frame, area);
+            if app.comment_sidebar_open {
+                let split = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+                    .split(area);
+                task_detail::render(app, frame, split[0]);
+                comment_sidebar::render(app, frame, split[1]);
+            } else {
+                task_detail::render(app, frame, area);
+            }
         }
     }
 }
@@ -298,9 +308,18 @@ fn key_hints(app: &App) -> Vec<(&'static str, &'static str)> {
             hints.push(("r", "Refresh"));
         }
         Screen::TaskDetail => {
-            hints.push(("↑/k", "Scroll up"));
-            hints.push(("↓/j", "Scroll down"));
-            hints.push(("Esc", "Back"));
+            if app.comment_sidebar_open {
+                hints.push(("↑/k", "Nav comments"));
+                hints.push(("↓/j", "Nav comments"));
+                hints.push(("n", "New comment"));
+                hints.push(("c", "Close comments"));
+                hints.push(("Esc", "Back"));
+            } else {
+                hints.push(("↑/k", "Scroll up"));
+                hints.push(("↓/j", "Scroll down"));
+                hints.push(("c", "Comments"));
+                hints.push(("Esc", "Back"));
+            }
         }
     }
 

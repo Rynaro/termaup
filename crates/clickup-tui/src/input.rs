@@ -98,7 +98,7 @@ pub fn handle_key(
             handle_task_list(app, key, client, tx);
         }
         Screen::TaskDetail => {
-            handle_task_detail(app, key);
+            handle_task_detail(app, key, client, tx);
         }
     }
 }
@@ -523,21 +523,151 @@ fn check_vision_pagination(
     }
 }
 
-fn handle_task_detail(app: &mut App, key: KeyEvent) {
+fn handle_task_detail(
+    app: &mut App,
+    key: KeyEvent,
+    client: &ClickUpClient,
+    tx: &mpsc::UnboundedSender<AppEvent>,
+) {
+    use crate::app::CommentInputMode;
+
+    // When composing a comment, route all input to the compose handler.
+    if app.comment_input_mode != CommentInputMode::Browse {
+        handle_comment_compose(app, key, client, tx);
+        return;
+    }
+
+    // When sidebar is open and in browse mode, handle comment navigation.
+    if app.comment_sidebar_open {
+        match key.code {
+            KeyCode::Esc => {
+                // Close sidebar first; if already closed, go back.
+                app.comment_sidebar_open = false;
+                app.comment_input_mode = CommentInputMode::Browse;
+            }
+            KeyCode::Char('c') => {
+                app.toggle_comment_sidebar();
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                if !app.comments.is_empty() {
+                    let max = app.comments.len().saturating_sub(1);
+                    app.selected_comment_index = (app.selected_comment_index + 1).min(max);
+                }
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                app.selected_comment_index = app.selected_comment_index.saturating_sub(1);
+            }
+            KeyCode::Char('n') => {
+                app.comment_input_mode = CommentInputMode::NewComment;
+                app.comment_input_text.clear();
+            }
+            KeyCode::Char('R') => {
+                // Reply to the selected comment.
+                if let Some(comment) = app.comments.get(app.selected_comment_index) {
+                    app.reply_target_id = Some(comment.id.clone());
+                    app.comment_input_mode = CommentInputMode::Reply;
+                    app.comment_input_text.clear();
+                }
+            }
+            KeyCode::Enter => {
+                // Toggle thread expansion for the selected comment.
+                if let Some(comment) = app.comments.get(app.selected_comment_index)
+                    && comment.reply_count > 0
+                {
+                    let id = comment.id.clone();
+                    if app.expanded_comments.contains(&id) {
+                        app.expanded_comments.remove(&id);
+                    } else {
+                        // Fetch replies if not already cached.
+                        if !app.comment_replies.contains_key(&id) {
+                            data::spawn_load_comment_replies(client, tx, &id);
+                        }
+                        app.expanded_comments.insert(id);
+                    }
+                }
+            }
+            KeyCode::Char('r') => {
+                // Refresh comments.
+                if let Some(task) = &app.current_task {
+                    let task_id = task.id.clone();
+                    app.loading = true;
+                    data::spawn_load_comments(client, tx, &task_id);
+                }
+            }
+            _ => {}
+        }
+        return;
+    }
+
+    // Sidebar closed — normal task detail navigation.
     match key.code {
         KeyCode::Esc => {
             app.pop_breadcrumb();
             app.current_task = None;
             app.comments.clear();
+            app.reset_comment_state();
             app.selected_index = app.saved_task_index;
             app.scroll_offset = 0;
             app.screen = Screen::TaskList;
+        }
+        KeyCode::Char('c') => {
+            app.toggle_comment_sidebar();
         }
         KeyCode::Down | KeyCode::Char('j') => {
             app.scroll_offset = app.scroll_offset.saturating_add(1);
         }
         KeyCode::Up | KeyCode::Char('k') => {
             app.scroll_offset = app.scroll_offset.saturating_sub(1);
+        }
+        _ => {}
+    }
+}
+
+fn handle_comment_compose(
+    app: &mut App,
+    key: KeyEvent,
+    client: &ClickUpClient,
+    tx: &mpsc::UnboundedSender<AppEvent>,
+) {
+    use crate::app::CommentInputMode;
+
+    match key.code {
+        KeyCode::Esc => {
+            // Cancel compose, return to browse.
+            app.comment_input_mode = CommentInputMode::Browse;
+            app.comment_input_text.clear();
+            app.reply_target_id = None;
+        }
+        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            // Submit the comment or reply.
+            let text = app.comment_input_text.trim().to_string();
+            if !text.is_empty() {
+                match &app.comment_input_mode {
+                    CommentInputMode::Reply => {
+                        if let Some(ref target_id) = app.reply_target_id {
+                            data::spawn_create_comment_reply(client, tx, target_id, &text);
+                        }
+                    }
+                    CommentInputMode::NewComment => {
+                        if let Some(task) = &app.current_task {
+                            data::spawn_create_comment(client, tx, &task.id, &text);
+                        }
+                    }
+                    CommentInputMode::Browse => {}
+                }
+            }
+            app.comment_input_mode = CommentInputMode::Browse;
+            app.comment_input_text.clear();
+            app.reply_target_id = None;
+        }
+        KeyCode::Enter => {
+            app.comment_input_text.push('\n');
+        }
+        KeyCode::Backspace => {
+            app.comment_input_text.pop();
+        }
+        KeyCode::Char(c) => {
+            app.comment_input_text.push(c);
         }
         _ => {}
     }

@@ -211,5 +211,8 @@ fn test_deserialize_comments_fixture() {
     assert_eq!(resp.comments.len(), 2);
     assert_eq!(resp.comments[0].user.as_ref().unwrap().username, "John Doe");
     assert!(resp.comments[0].comment_text.contains("RS256"));
-    assert_eq!(resp.comments[1].user.as_ref().unwrap().username, "Jane Smith");
+    assert_eq!(
+        resp.comments[1].user.as_ref().unwrap().username,
+        "Jane Smith"
+    );
 }

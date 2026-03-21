@@ -330,35 +330,6 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
         }
     }
 
-    // ─── Comments ───
-    if !app.comments.is_empty() {
-        lines.push(Line::from(""));
-        lines.push(section_header(&format!(
-            "Comments ({})",
-            app.comments.len()
-        )));
-        lines.push(Line::from(""));
-
-        for comment in &app.comments {
-            let date = format_timestamp(Some(&comment.date)).unwrap_or_default();
-
-            lines.push(Line::from(vec![
-                Span::styled(
-                    format!("    {} ", comment.user.username),
-                    Style::default()
-                        .fg(Color::Cyan)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(date, Style::default().fg(Color::DarkGray)),
-            ]));
-
-            for text_line in comment.comment_text.lines() {
-                lines.push(Line::from(format!("      {text_line}")));
-            }
-            lines.push(Line::from(""));
-        }
-    }
-
     lines.push(Line::from(""));
 
     // Apply scroll offset.

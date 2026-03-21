@@ -114,7 +114,8 @@ fn tasks_extractor(value: serde_json::Value) -> Result<PaginatedResponse<Task>> 
         .cloned()
         .unwrap_or(serde_json::Value::Array(vec![]));
 
-    let data: Vec<Task> = serde_json::from_value(tasks_value).map_err(ClickUpError::deserialization)?;
+    let data: Vec<Task> =
+        serde_json::from_value(tasks_value).map_err(ClickUpError::deserialization)?;
     Ok(PaginatedResponse::new(data, last_page))
 }
 

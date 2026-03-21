@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 use clickup_api::models::{Comment, Folder, List, Space, Status, Task, User, Workspace};
@@ -33,6 +33,17 @@ pub enum ViewMode {
     VisionSections,
     /// Horizontal kanban board grouped by status.
     VisionBoard,
+}
+
+/// Input mode for the comment sidebar.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CommentInputMode {
+    /// Browsing/navigating comments.
+    Browse,
+    /// Composing a new top-level comment.
+    NewComment,
+    /// Replying to a specific comment.
+    Reply,
 }
 
 impl ViewMode {
@@ -187,6 +198,24 @@ pub struct App {
     /// Whether a background page load is in progress.
     pub loading_more: bool,
 
+    // --- Comments ---
+    /// Whether the comment sidebar is visible on the TaskDetail screen.
+    pub comment_sidebar_open: bool,
+    /// Current input mode for the comment sidebar.
+    pub comment_input_mode: CommentInputMode,
+    /// Text being composed in the comment input area.
+    pub comment_input_text: String,
+    /// Index of the selected comment in the sidebar.
+    pub selected_comment_index: usize,
+    /// Set of comment IDs whose reply threads are expanded.
+    pub expanded_comments: HashSet<String>,
+    /// Cached replies per comment ID.
+    pub comment_replies: HashMap<String, Vec<Comment>>,
+    /// Scroll offset for the comment sidebar.
+    pub comment_scroll_offset: u16,
+    /// Comment ID being replied to (when in Reply mode).
+    pub reply_target_id: Option<String>,
+
     // --- UI state ---
     /// Error message to display (auto-dismisses).
     pub error_message: Option<String>,
@@ -251,6 +280,14 @@ impl App {
             current_page: 0,
             has_more_pages: false,
             loading_more: false,
+            comment_sidebar_open: false,
+            comment_input_mode: CommentInputMode::Browse,
+            comment_input_text: String::new(),
+            selected_comment_index: 0,
+            expanded_comments: HashSet::new(),
+            comment_replies: HashMap::new(),
+            comment_scroll_offset: 0,
+            reply_target_id: None,
             error_message: None,
             error_set_at: None,
             loading: false,
@@ -551,6 +588,28 @@ impl App {
             .map(|g| g.task_indices.len())
             .sum()
     }
+
+    /// Resets all comment sidebar state.
+    pub fn reset_comment_state(&mut self) {
+        self.comment_sidebar_open = false;
+        self.comment_input_mode = CommentInputMode::Browse;
+        self.comment_input_text.clear();
+        self.selected_comment_index = 0;
+        self.expanded_comments.clear();
+        self.comment_replies.clear();
+        self.comment_scroll_offset = 0;
+        self.reply_target_id = None;
+    }
+
+    /// Toggles the comment sidebar visibility.
+    pub fn toggle_comment_sidebar(&mut self) {
+        self.comment_sidebar_open = !self.comment_sidebar_open;
+        if !self.comment_sidebar_open {
+            self.comment_input_mode = CommentInputMode::Browse;
+            self.comment_input_text.clear();
+            self.reply_target_id = None;
+        }
+    }
 }
 
 /// Generic case-insensitive filter returning matching indices.
@@ -745,30 +804,30 @@ mod tests {
             date_updated: "0".to_string(),
             date_closed: None,
             date_done: None,
-            creator: User {
+            creator: Some(User {
                 id: 1,
                 username: "u".to_string(),
                 email: "u@t.com".to_string(),
                 color: None,
                 profile_picture: None,
                 initials: None,
-            },
+            }),
             assignees: vec![],
             priority: None,
             due_date: None,
             start_date: None,
             tags: vec![],
-            list: TaskList {
+            list: Some(TaskList {
                 id: "l".to_string(),
                 name: None,
-            },
-            folder: TaskFolder {
+            }),
+            folder: Some(TaskFolder {
                 id: "f".to_string(),
                 name: None,
-            },
-            space: TaskSpace {
+            }),
+            space: Some(TaskSpace {
                 id: "s".to_string(),
-            },
+            }),
             url: String::new(),
             markdown_description: None,
             parent: None,

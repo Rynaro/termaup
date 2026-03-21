@@ -82,7 +82,7 @@ async fn list_comments(
         for comment in &comments {
             let mut entry = serde_json::json!({
                 "id": comment.id,
-                "author": comment.user.username,
+                "author": comment.user.as_ref().map(|u| u.username.as_str()).unwrap_or("Unknown"),
                 "text": comment.comment_text,
                 "date": comment.date,
                 "reply_count": comment.reply_count,
@@ -95,7 +95,7 @@ async fn list_comments(
                             .map(|r| {
                                 serde_json::json!({
                                     "id": r.id,
-                                    "author": r.user.username,
+                                    "author": r.user.as_ref().map(|u| u.username.as_str()).unwrap_or("Unknown"),
                                     "text": r.comment_text,
                                     "date": r.date,
                                 })
@@ -127,7 +127,7 @@ async fn list_comments(
         let date = output::format_date(Some(&comment.date));
         rows.push(vec![
             comment.id.clone(),
-            comment.user.username.clone(),
+            comment.user.as_ref().map(|u| u.username.clone()).unwrap_or_else(|| "Unknown".to_string()),
             truncate_text(&comment.comment_text, 50),
             date,
         ]);
@@ -140,7 +140,7 @@ async fn list_comments(
                         let connector = if is_last { "└" } else { "├" };
                         rows.push(vec![
                             format!("{connector} {}", reply.id),
-                            reply.user.username.clone(),
+                            reply.user.as_ref().map(|u| u.username.clone()).unwrap_or_else(|| "Unknown".to_string()),
                             truncate_text(&reply.comment_text, 50),
                             output::format_date(Some(&reply.date)),
                         ]);

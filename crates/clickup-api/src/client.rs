@@ -2,8 +2,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use reqwest::header::{self, HeaderMap, HeaderValue};
-use serde::Deserialize;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
 use crate::error::{ClickUpError, Result};
@@ -79,6 +79,22 @@ impl ClickUpClient {
         tracing::debug!(%url, ?params, "GET request");
 
         let response = self.http.get(&url).query(params).send().await?;
+
+        self.handle_response(response, &url).await
+    }
+
+    /// Performs a POST request with a JSON body and deserializes the response.
+    pub async fn post<T: DeserializeOwned, B: Serialize + Send>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<T> {
+        self.rate_limiter.lock().await.check_and_wait().await;
+
+        let url = format!("{}{}", self.base_url, path);
+        tracing::debug!(%url, "POST request");
+
+        let response = self.http.post(&url).json(body).send().await?;
 
         self.handle_response(response, &url).await
     }
@@ -374,6 +390,84 @@ mod tests {
                 assert_eq!(message, "Internal error (SVR_001)");
             }
             other => panic!("expected ApiError, got: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_post_success() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/api/v2/task/abc/comment"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(
+                serde_json::json!({"id": "c1", "comment_text": "hello", "user": {"id": 1}}),
+            ))
+            .mount(&server)
+            .await;
+
+        let client = test_client(&format!("{}/api/v2", server.uri())).await;
+        let body = serde_json::json!({"comment_text": "hello"});
+        let result: serde_json::Value = client.post("/task/abc/comment", &body).await.unwrap();
+        assert_eq!(result["id"], "c1");
+        assert_eq!(result["comment_text"], "hello");
+    }
+
+    #[tokio::test]
+    async fn test_post_401_returns_auth_error() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/api/v2/task/abc/comment"))
+            .respond_with(
+                ResponseTemplate::new(401).set_body_json(
+                    serde_json::json!({"err": "Token invalid", "ECODE": "OAUTH_025"}),
+                ),
+            )
+            .mount(&server)
+            .await;
+
+        let client = test_client(&format!("{}/api/v2", server.uri())).await;
+        let body = serde_json::json!({"comment_text": "hello"});
+        let err = client
+            .post::<serde_json::Value, _>("/task/abc/comment", &body)
+            .await
+            .unwrap_err();
+
+        match err {
+            ClickUpError::AuthError(msg) => {
+                assert_eq!(msg, "Token invalid");
+            }
+            other => panic!("expected AuthError, got: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_post_429_returns_rate_limited() {
+        let server = MockServer::start().await;
+        let reset_ts = chrono::Utc::now().timestamp() as u64 + 30;
+        Mock::given(method("POST"))
+            .and(path("/api/v2/task/abc/comment"))
+            .respond_with(
+                ResponseTemplate::new(429)
+                    .insert_header("X-RateLimit-Reset", reset_ts.to_string().as_str())
+                    .insert_header("X-RateLimit-Remaining", "0"),
+            )
+            .mount(&server)
+            .await;
+
+        let client = test_client(&format!("{}/api/v2", server.uri())).await;
+        let body = serde_json::json!({"comment_text": "hello"});
+        let err = client
+            .post::<serde_json::Value, _>("/task/abc/comment", &body)
+            .await
+            .unwrap_err();
+
+        match err {
+            ClickUpError::RateLimited { retry_after_secs } => {
+                assert!(
+                    retry_after_secs <= 31,
+                    "retry_after_secs should be ~30, got {retry_after_secs}"
+                );
+            }
+            other => panic!("expected RateLimited, got: {other:?}"),
         }
     }
 

@@ -105,7 +105,7 @@ async fn run_app(
                 input::handle_mouse(&mut app, mouse, &client, &event_tx, 2);
             }
             AppEvent::DataLoaded(payload) => {
-                handle_data(&mut app, payload);
+                handle_data(&mut app, *payload);
             }
             AppEvent::Error(msg) => {
                 app.loading = false;
@@ -154,6 +154,47 @@ fn handle_data(app: &mut App, payload: DataPayload) {
         }
         DataPayload::Comments(comments) => {
             app.comments = comments;
+        }
+        DataPayload::CommentCreated(mut comment) => {
+            // The POST response is sparse — backfill the current user
+            // when the API omits it.
+            if comment.user.is_none() {
+                comment.user = app.current_user.clone();
+            }
+            app.comments.insert(0, *comment);
+            app.comment_input_mode = app::CommentInputMode::Browse;
+            app.comment_input_text.clear();
+            app.comment_scroll_offset = 0;
+            app.selected_comment_index = 0;
+        }
+        DataPayload::CommentReplies {
+            comment_id,
+            replies,
+        } => {
+            app.comment_replies.insert(comment_id, replies);
+        }
+        DataPayload::ReplyCreated {
+            parent_comment_id,
+            mut reply,
+        } => {
+            // Backfill the current user when the API omits it.
+            if reply.user.is_none() {
+                reply.user = app.current_user.clone();
+            }
+            // Insert into the replies cache.
+            app.comment_replies
+                .entry(parent_comment_id.clone())
+                .or_default()
+                .push(*reply);
+            // Increment reply_count on the parent comment.
+            if let Some(parent) = app.comments.iter_mut().find(|c| c.id == parent_comment_id) {
+                parent.reply_count += 1;
+            }
+            // Auto-expand the thread so the new reply is visible.
+            app.expanded_comments.insert(parent_comment_id);
+            app.comment_input_mode = app::CommentInputMode::Browse;
+            app.comment_input_text.clear();
+            app.reply_target_id = None;
         }
         DataPayload::TasksPage {
             tasks,

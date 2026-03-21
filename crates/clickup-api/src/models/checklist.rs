@@ -43,7 +43,10 @@ pub struct ChecklistItem {
     /// Item name / description.
     pub name: String,
     /// Whether this item is resolved (checked).
-    #[serde(default, deserialize_with = "crate::serde_helpers::deserialize_bool_or_int")]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_helpers::deserialize_bool_or_int"
+    )]
     pub resolved: bool,
     /// User assigned to this item, if any.
     #[serde(default)]

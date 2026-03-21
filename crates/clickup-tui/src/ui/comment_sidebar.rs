@@ -101,7 +101,14 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
 
         lines.push(Line::from(vec![
             Span::styled("  ", bg_style),
-            Span::styled(comment.user.username.clone(), author_style),
+            Span::styled(
+                comment
+                    .user
+                    .as_ref()
+                    .map(|u| u.username.clone())
+                    .unwrap_or_else(|| "Unknown".to_string()),
+                author_style,
+            ),
             Span::styled(" · ", date_style),
             Span::styled(date_str, date_style),
         ]));
@@ -167,7 +174,14 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
                             format!("    {connector} "),
                             Style::default().fg(Color::DarkGray),
                         ),
-                        Span::styled(reply.user.username.clone(), r_author_style),
+                        Span::styled(
+                            reply
+                                .user
+                                .as_ref()
+                                .map(|u| u.username.clone())
+                                .unwrap_or_else(|| "Unknown".to_string()),
+                            r_author_style,
+                        ),
                         Span::styled(" · ", r_date_style),
                         Span::styled(reply_date, r_date_style),
                     ]));
@@ -217,13 +231,13 @@ fn render_input_area(app: &App, frame: &mut Frame, area: Rect) {
                     .comments
                     .iter()
                     .find(|c| c.id == *target_id)
-                    .map(|c| c.user.username.as_str())
+                    .and_then(|c| c.user.as_ref().map(|u| u.username.as_str()))
                     .or_else(|| {
                         app.comment_replies
                             .values()
                             .flatten()
                             .find(|c| c.id == *target_id)
-                            .map(|c| c.user.username.as_str())
+                            .and_then(|c| c.user.as_ref().map(|u| u.username.as_str()))
                     })
                     .unwrap_or("comment");
                 format!("Reply to {username}:")

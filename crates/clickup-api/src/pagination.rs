@@ -37,8 +37,8 @@ pub fn standard_extractor<T: DeserializeOwned>(
             .cloned()
             .unwrap_or(serde_json::Value::Array(vec![]));
 
-        let data: Vec<T> =
-            serde_json::from_value(items_value).map_err(crate::error::ClickUpError::deserialization)?;
+        let data: Vec<T> = serde_json::from_value(items_value)
+            .map_err(crate::error::ClickUpError::deserialization)?;
         Ok(PaginatedResponse { data, last_page })
     }
 }

@@ -227,14 +227,14 @@ mod tests {
             date_updated: "1710000000000".to_string(),
             date_closed: None,
             date_done: None,
-            creator: User {
+            creator: Some(User {
                 id: 1,
                 username: "test".to_string(),
                 email: "test@test.com".to_string(),
                 color: None,
                 profile_picture: None,
                 initials: None,
-            },
+            }),
             assignees: vec![],
             priority: priority.map(|p| TaskPriority {
                 id: Some("1".to_string()),
@@ -244,17 +244,17 @@ mod tests {
             due_date: due.map(|d| d.to_string()),
             start_date: None,
             tags: vec![],
-            list: TaskList {
+            list: Some(TaskList {
                 id: "l1".to_string(),
                 name: None,
-            },
-            folder: TaskFolder {
+            }),
+            folder: Some(TaskFolder {
                 id: "f1".to_string(),
                 name: None,
-            },
-            space: TaskSpace {
+            }),
+            space: Some(TaskSpace {
                 id: "s1".to_string(),
-            },
+            }),
             url: String::new(),
             markdown_description: None,
             parent: None,
