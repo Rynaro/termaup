@@ -196,15 +196,18 @@ fn handle_data(app: &mut App, payload: DataPayload) {
             app.comment_input_text.clear();
             app.reply_target_id = None;
         }
-        DataPayload::CommentUpdated(updated) => {
+        DataPayload::CommentUpdated {
+            comment_id,
+            new_text,
+        } => {
             // Update the comment in top-level comments or in replies.
-            if let Some(existing) = app.comments.iter_mut().find(|c| c.id == updated.id) {
-                existing.comment_text = updated.comment_text.clone();
+            if let Some(existing) = app.comments.iter_mut().find(|c| c.id == comment_id) {
+                existing.comment_text = new_text.clone();
             } else {
                 // Search in reply caches.
                 for replies in app.comment_replies.values_mut() {
-                    if let Some(reply) = replies.iter_mut().find(|r| r.id == updated.id) {
-                        reply.comment_text = updated.comment_text.clone();
+                    if let Some(reply) = replies.iter_mut().find(|r| r.id == comment_id) {
+                        reply.comment_text = new_text.clone();
                         break;
                     }
                 }

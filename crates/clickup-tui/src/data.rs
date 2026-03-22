@@ -266,14 +266,13 @@ pub fn spawn_update_comment(
             resolved: None,
         };
         match client.update_comment(&comment_id, &request).await {
-            Ok(mut comment) => {
-                // The PUT response may be sparse — backfill the text we submitted.
-                if comment.comment_text.is_empty() {
-                    comment.comment_text = new_text;
-                }
-                let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::CommentUpdated(
-                    Box::new(comment),
-                ))));
+            Ok(()) => {
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(
+                    DataPayload::CommentUpdated {
+                        comment_id,
+                        new_text,
+                    },
+                )));
             }
             Err(e) => {
                 let _ = tx.send(AppEvent::Error(format!("Failed to update comment: {e}")));

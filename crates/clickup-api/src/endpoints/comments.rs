@@ -44,9 +44,10 @@ impl ClickUpClient {
         &self,
         comment_id: &str,
         request: &UpdateCommentRequest,
-    ) -> Result<Comment> {
+    ) -> Result<()> {
         tracing::debug!(%comment_id, "updating comment");
-        self.put(&format!("/comment/{comment_id}"), request).await
+        self.put_no_body(&format!("/comment/{comment_id}"), request)
+            .await
     }
 
     /// Deletes a comment permanently.
@@ -225,17 +226,7 @@ mod tests {
         let server = MockServer::start().await;
         Mock::given(method("PUT"))
             .and(path("/api/v2/comment/c1"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-                "id": "c1",
-                "comment_text": "Updated text",
-                "user": {
-                    "id": 1,
-                    "username": "alice",
-                    "email": "alice@example.com"
-                },
-                "date": "1710000000000",
-                "resolved": false
-            })))
+            .respond_with(ResponseTemplate::new(200))
             .mount(&server)
             .await;
 
@@ -247,10 +238,7 @@ mod tests {
             assignee: None,
             resolved: None,
         };
-        let comment = client.update_comment("c1", &request).await.unwrap();
-        assert_eq!(comment.id, "c1");
-        assert_eq!(comment.comment_text, "Updated text");
-        assert_eq!(comment.user.as_ref().unwrap().username, "alice");
+        client.update_comment("c1", &request).await.unwrap();
     }
 
     #[tokio::test]
@@ -258,12 +246,7 @@ mod tests {
         let server = MockServer::start().await;
         Mock::given(method("PUT"))
             .and(path("/api/v2/comment/c5"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-                "id": "c5",
-                "comment_text": "Resolved now",
-                "resolved": true,
-                "date": "1710500000000"
-            })))
+            .respond_with(ResponseTemplate::new(200))
             .mount(&server)
             .await;
 
@@ -275,9 +258,7 @@ mod tests {
             assignee: None,
             resolved: Some(true),
         };
-        let comment = client.update_comment("c5", &request).await.unwrap();
-        assert_eq!(comment.id, "c5");
-        assert_eq!(comment.resolved, Some(true));
+        client.update_comment("c5", &request).await.unwrap();
     }
 
     #[tokio::test]

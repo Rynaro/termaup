@@ -115,6 +115,19 @@ impl ClickUpClient {
         self.handle_response(response, &url).await
     }
 
+    /// Performs a PUT request with a JSON body that expects no usable
+    /// response body.
+    pub async fn put_no_body<B: Serialize + Send>(&self, path: &str, body: &B) -> Result<()> {
+        self.rate_limiter.lock().await.check_and_wait().await;
+
+        let url = format!("{}{}", self.base_url, path);
+        tracing::debug!(%url, "PUT request (no body)");
+
+        let response = self.http.put(&url).json(body).send().await?;
+
+        self.handle_response_no_body(response, &url).await
+    }
+
     /// Performs a DELETE request that expects no response body.
     pub async fn delete(&self, path: &str) -> Result<()> {
         self.rate_limiter.lock().await.check_and_wait().await;

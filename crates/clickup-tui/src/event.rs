@@ -53,7 +53,12 @@ pub enum DataPayload {
         reply: Box<Comment>,
     },
     /// A comment was successfully updated.
-    CommentUpdated(Box<Comment>),
+    CommentUpdated {
+        /// The updated comment's ID.
+        comment_id: String,
+        /// The new comment text.
+        new_text: String,
+    },
     /// A comment was successfully deleted.
     CommentDeleted {
         /// The deleted comment's ID.

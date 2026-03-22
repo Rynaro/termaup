@@ -241,12 +241,12 @@ async fn edit_comment(
         resolved: None,
     };
 
-    let comment = client
+    client
         .update_comment(comment_id, &request)
         .await
         .context("failed to edit comment")?;
 
-    output::success(&format!("Comment updated (ID: {})", comment.id));
+    output::success(&format!("Comment updated (ID: {comment_id})"));
     Ok(())
 }
 
