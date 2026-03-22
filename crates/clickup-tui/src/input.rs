@@ -738,12 +738,29 @@ fn handle_comment_compose(
                     }
                     CommentInputMode::EditComment => {
                         if let Some(ref comment_id) = app.editing_comment_id {
+                            // Derive parent from the reply cache at submission time.
+                            // This is more robust than relying on the stored
+                            // `editing_parent_id` which can be cleared by async
+                            // events arriving between `e` and `Ctrl+D`.
+                            let parent_id: Option<String> =
+                                app.comment_replies.iter().find_map(|(pid, replies)| {
+                                    replies
+                                        .iter()
+                                        .any(|r| r.id == *comment_id)
+                                        .then(|| pid.clone())
+                                });
+                            tracing::debug!(
+                                %comment_id,
+                                ?parent_id,
+                                stored_parent = ?app.editing_parent_id,
+                                "submitting comment edit"
+                            );
                             data::spawn_update_comment(
                                 client,
                                 tx,
                                 comment_id,
                                 &text,
-                                app.editing_parent_id.as_deref(),
+                                parent_id.as_deref(),
                             );
                         }
                     }

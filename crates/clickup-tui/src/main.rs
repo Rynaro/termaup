@@ -212,10 +212,19 @@ fn handle_data(app: &mut App, payload: DataPayload) {
                     }
                 }
             }
-            app.comment_input_mode = app::CommentInputMode::Browse;
-            app.comment_input_text.clear();
-            app.editing_comment_id = None;
-            app.editing_parent_id = None;
+            // Only reset editing state if this update matches the comment
+            // currently being edited — a stale event from a previous edit
+            // must not clobber an in-progress edit session.
+            let matches_current = app
+                .editing_comment_id
+                .as_deref()
+                .is_some_and(|id| id == comment_id);
+            if matches_current || app.editing_comment_id.is_none() {
+                app.comment_input_mode = app::CommentInputMode::Browse;
+                app.comment_input_text.clear();
+                app.editing_comment_id = None;
+                app.editing_parent_id = None;
+            }
         }
         DataPayload::CommentDeleted {
             comment_id,
