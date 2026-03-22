@@ -215,6 +215,7 @@ fn handle_data(app: &mut App, payload: DataPayload) {
             app.comment_input_mode = app::CommentInputMode::Browse;
             app.comment_input_text.clear();
             app.editing_comment_id = None;
+            app.editing_parent_id = None;
         }
         DataPayload::CommentDeleted {
             comment_id,

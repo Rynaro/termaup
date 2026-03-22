@@ -612,9 +612,11 @@ fn handle_task_detail(
                     let info = app
                         .resolve_comment_item(item)
                         .map(|c| (c.id.clone(), c.comment_text.clone(), app.is_own_comment(c)));
+                    let parent_id = app.parent_id_for_item(item);
                     if let Some((id, text, is_own)) = info {
                         if is_own {
                             app.editing_comment_id = Some(id);
+                            app.editing_parent_id = parent_id;
                             app.comment_input_text = text;
                             app.comment_input_mode = CommentInputMode::EditComment;
                         } else {
@@ -717,6 +719,7 @@ fn handle_comment_compose(
             app.comment_input_text.clear();
             app.reply_target_id = None;
             app.editing_comment_id = None;
+            app.editing_parent_id = None;
         }
         KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             // Submit the comment, reply, or edit.
@@ -735,7 +738,13 @@ fn handle_comment_compose(
                     }
                     CommentInputMode::EditComment => {
                         if let Some(ref comment_id) = app.editing_comment_id {
-                            data::spawn_update_comment(client, tx, comment_id, &text);
+                            data::spawn_update_comment(
+                                client,
+                                tx,
+                                comment_id,
+                                &text,
+                                app.editing_parent_id.as_deref(),
+                            );
                         }
                     }
                     CommentInputMode::Browse => {}
@@ -745,6 +754,7 @@ fn handle_comment_compose(
             app.comment_input_text.clear();
             app.reply_target_id = None;
             app.editing_comment_id = None;
+            app.editing_parent_id = None;
         }
         KeyCode::Enter => {
             app.comment_input_text.push('\n');

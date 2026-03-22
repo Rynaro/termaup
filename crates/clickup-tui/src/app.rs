@@ -236,6 +236,8 @@ pub struct App {
     pub reply_target_id: Option<String>,
     /// Comment ID currently being edited (when in EditComment mode).
     pub editing_comment_id: Option<String>,
+    /// Parent comment ID of the comment being edited (if it's a reply).
+    pub editing_parent_id: Option<String>,
     /// Comment ID pending delete confirmation.
     pub delete_confirm_target: Option<String>,
     /// Parent comment ID of the delete target (if it's a reply).
@@ -314,6 +316,7 @@ impl App {
             comment_scroll_offset: 0,
             reply_target_id: None,
             editing_comment_id: None,
+            editing_parent_id: None,
             delete_confirm_target: None,
             delete_confirm_parent: None,
             error_message: None,
@@ -628,6 +631,7 @@ impl App {
         self.comment_scroll_offset = 0;
         self.reply_target_id = None;
         self.editing_comment_id = None;
+        self.editing_parent_id = None;
         self.delete_confirm_target = None;
         self.delete_confirm_parent = None;
     }
@@ -640,6 +644,7 @@ impl App {
             self.comment_input_text.clear();
             self.reply_target_id = None;
             self.editing_comment_id = None;
+            self.editing_parent_id = None;
             self.delete_confirm_target = None;
             self.delete_confirm_parent = None;
         }
