@@ -76,7 +76,8 @@ impl ClickUpClient {
         self.rate_limiter.lock().await.check_and_wait().await;
 
         let url = format!("{}{}", self.base_url, path);
-        tracing::debug!(%url, ?params, "GET request");
+        let request_id = crate::logging::generate_request_id();
+        tracing::debug!(%url, ?params, %request_id, "GET request");
 
         let response = self.http.get(&url).query(params).send().await?;
 
@@ -92,7 +93,8 @@ impl ClickUpClient {
         self.rate_limiter.lock().await.check_and_wait().await;
 
         let url = format!("{}{}", self.base_url, path);
-        tracing::debug!(%url, "POST request");
+        let request_id = crate::logging::generate_request_id();
+        tracing::debug!(%url, %request_id, "POST request");
 
         let response = self.http.post(&url).json(body).send().await?;
 
@@ -108,7 +110,8 @@ impl ClickUpClient {
         self.rate_limiter.lock().await.check_and_wait().await;
 
         let url = format!("{}{}", self.base_url, path);
-        tracing::debug!(%url, "PUT request");
+        let request_id = crate::logging::generate_request_id();
+        tracing::debug!(%url, %request_id, "PUT request");
 
         let response = self.http.put(&url).json(body).send().await?;
 
@@ -121,7 +124,8 @@ impl ClickUpClient {
         self.rate_limiter.lock().await.check_and_wait().await;
 
         let url = format!("{}{}", self.base_url, path);
-        tracing::debug!(%url, "PUT request (no body)");
+        let request_id = crate::logging::generate_request_id();
+        tracing::debug!(%url, %request_id, "PUT request (no body)");
 
         let response = self.http.put(&url).json(body).send().await?;
 
@@ -133,7 +137,8 @@ impl ClickUpClient {
         self.rate_limiter.lock().await.check_and_wait().await;
 
         let url = format!("{}{}", self.base_url, path);
-        tracing::debug!(%url, "DELETE request");
+        let request_id = crate::logging::generate_request_id();
+        tracing::debug!(%url, %request_id, "DELETE request");
 
         let response = self.http.delete(&url).send().await?;
 

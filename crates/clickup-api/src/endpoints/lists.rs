@@ -1,9 +1,12 @@
+use tracing::instrument;
+
 use crate::client::ClickUpClient;
 use crate::error::Result;
 use crate::models::{List, ListsResponse};
 
 impl ClickUpClient {
     /// Returns all lists inside a folder.
+    #[instrument(skip(self), fields(%folder_id))]
     pub async fn get_lists_in_folder(&self, folder_id: &str) -> Result<Vec<List>> {
         tracing::debug!(%folder_id, "fetching lists in folder");
         let response: ListsResponse = self.get(&format!("/folder/{folder_id}/list")).await?;
@@ -11,6 +14,7 @@ impl ClickUpClient {
     }
 
     /// Returns folderless lists in a space.
+    #[instrument(skip(self), fields(%space_id))]
     pub async fn get_folderless_lists(&self, space_id: &str) -> Result<Vec<List>> {
         tracing::debug!(%space_id, "fetching folderless lists");
         let response: ListsResponse = self.get(&format!("/space/{space_id}/list")).await?;
@@ -18,6 +22,7 @@ impl ClickUpClient {
     }
 
     /// Returns details for a single list.
+    #[instrument(skip(self), fields(%list_id))]
     pub async fn get_list(&self, list_id: &str) -> Result<List> {
         tracing::debug!(%list_id, "fetching list");
         self.get(&format!("/list/{list_id}")).await

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{ClickUpError, Result};
+use crate::logging::LoggingConfig;
 
 /// Output format for CLI command results.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -35,6 +36,10 @@ pub struct Config {
     /// Default output format for CLI commands.
     #[serde(default)]
     pub output_format: OutputFormat,
+
+    /// Logging configuration.
+    #[serde(default)]
+    pub logging: LoggingConfig,
 }
 
 fn default_api_base_url() -> String {
@@ -48,6 +53,7 @@ impl Default for Config {
             default_space_id: None,
             api_base_url: default_api_base_url(),
             output_format: OutputFormat::default(),
+            logging: LoggingConfig::default(),
         }
     }
 }
@@ -115,6 +121,7 @@ mod tests {
             default_space_id: Some("space_456".into()),
             api_base_url: "https://api.clickup.com/api/v2".into(),
             output_format: OutputFormat::Json,
+            logging: LoggingConfig::default(),
         };
 
         let toml_str = toml::to_string_pretty(&config).expect("serialize");

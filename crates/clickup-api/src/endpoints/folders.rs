@@ -1,9 +1,12 @@
+use tracing::instrument;
+
 use crate::client::ClickUpClient;
 use crate::error::Result;
 use crate::models::{Folder, FoldersResponse};
 
 impl ClickUpClient {
     /// Returns all folders in a space.
+    #[instrument(skip(self), fields(%space_id))]
     pub async fn get_folders(&self, space_id: &str) -> Result<Vec<Folder>> {
         tracing::debug!(%space_id, "fetching folders");
         let response: FoldersResponse = self.get(&format!("/space/{space_id}/folder")).await?;

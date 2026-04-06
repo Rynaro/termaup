@@ -1,9 +1,12 @@
+use tracing::instrument;
+
 use crate::client::ClickUpClient;
 use crate::error::Result;
 use crate::models::{Comment, CommentsResponse, CreateCommentRequest, UpdateCommentRequest};
 
 impl ClickUpClient {
     /// Returns all comments on a task.
+    #[instrument(skip(self), fields(%task_id))]
     pub async fn get_task_comments(&self, task_id: &str) -> Result<Vec<Comment>> {
         tracing::debug!(%task_id, "fetching task comments");
         let response: CommentsResponse = self.get(&format!("/task/{task_id}/comment")).await?;
@@ -11,6 +14,7 @@ impl ClickUpClient {
     }
 
     /// Returns threaded replies for a comment.
+    #[instrument(skip(self), fields(%comment_id))]
     pub async fn get_comment_replies(&self, comment_id: &str) -> Result<Vec<Comment>> {
         tracing::debug!(%comment_id, "fetching comment replies");
         let response: CommentsResponse = self.get(&format!("/comment/{comment_id}/reply")).await?;
@@ -18,6 +22,7 @@ impl ClickUpClient {
     }
 
     /// Creates a new comment on a task.
+    #[instrument(skip(self, request), fields(%task_id))]
     pub async fn create_task_comment(
         &self,
         task_id: &str,
@@ -29,6 +34,7 @@ impl ClickUpClient {
     }
 
     /// Creates a threaded reply on an existing comment.
+    #[instrument(skip(self, request), fields(%comment_id))]
     pub async fn create_comment_reply(
         &self,
         comment_id: &str,
@@ -40,6 +46,7 @@ impl ClickUpClient {
     }
 
     /// Updates an existing comment's text, assignee, or resolved status.
+    #[instrument(skip(self, request), fields(%comment_id))]
     pub async fn update_comment(
         &self,
         comment_id: &str,
@@ -51,6 +58,7 @@ impl ClickUpClient {
     }
 
     /// Deletes a comment permanently.
+    #[instrument(skip(self), fields(%comment_id))]
     pub async fn delete_comment(&self, comment_id: &str) -> Result<()> {
         tracing::debug!(%comment_id, "deleting comment");
         self.delete(&format!("/comment/{comment_id}")).await

@@ -1,9 +1,12 @@
+use tracing::instrument;
+
 use crate::client::ClickUpClient;
 use crate::error::Result;
 use crate::models::{Workspace, WorkspacesResponse};
 
 impl ClickUpClient {
     /// Returns all workspaces (teams) the authenticated user belongs to.
+    #[instrument(skip(self))]
     pub async fn get_workspaces(&self) -> Result<Vec<Workspace>> {
         tracing::debug!("fetching workspaces");
         let response: WorkspacesResponse = self.get("/team").await?;

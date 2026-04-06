@@ -1,3 +1,5 @@
+use tracing::instrument;
+
 use crate::client::ClickUpClient;
 use crate::error::{ClickUpError, Result};
 use crate::models::Task;
@@ -7,6 +9,7 @@ impl ClickUpClient {
     /// Returns all tasks in a list, automatically paginating.
     ///
     /// Includes tasks added to this list from other lists (TIML).
+    #[instrument(skip(self), fields(%list_id))]
     pub async fn get_tasks(&self, list_id: &str) -> Result<Vec<Task>> {
         tracing::debug!(%list_id, "fetching tasks");
         self.get_all_pages(
@@ -21,6 +24,7 @@ impl ClickUpClient {
     /// to include closed tasks. Automatically paginates.
     ///
     /// Includes tasks added to this list from other lists (TIML).
+    #[instrument(skip(self), fields(%list_id, ?statuses, ?assignees, include_closed))]
     pub async fn get_tasks_with_filters(
         &self,
         list_id: &str,
@@ -57,6 +61,7 @@ impl ClickUpClient {
     ///
     /// Unlike [`get_tasks`] which auto-paginates and returns all tasks,
     /// this method fetches exactly one page for progressive loading.
+    #[instrument(skip(self), fields(%list_id, page, ?statuses, ?assignees, include_closed))]
     pub async fn get_tasks_page(
         &self,
         list_id: &str,
@@ -88,6 +93,7 @@ impl ClickUpClient {
     }
 
     /// Returns a single task by ID with subtasks and markdown description.
+    #[instrument(skip(self), fields(%task_id))]
     pub async fn get_task(&self, task_id: &str) -> Result<Task> {
         tracing::debug!(%task_id, "fetching task");
         self.get_with_params(

@@ -1,9 +1,12 @@
+use tracing::instrument;
+
 use crate::client::ClickUpClient;
 use crate::error::Result;
 use crate::models::{Space, SpacesResponse};
 
 impl ClickUpClient {
     /// Returns all spaces in a workspace.
+    #[instrument(skip(self), fields(%team_id))]
     pub async fn get_spaces(&self, team_id: &str) -> Result<Vec<Space>> {
         tracing::debug!(%team_id, "fetching spaces");
         let response: SpacesResponse = self.get(&format!("/team/{team_id}/space")).await?;
@@ -11,6 +14,7 @@ impl ClickUpClient {
     }
 
     /// Returns details for a single space.
+    #[instrument(skip(self), fields(%space_id))]
     pub async fn get_space(&self, space_id: &str) -> Result<Space> {
         tracing::debug!(%space_id, "fetching space");
         self.get(&format!("/space/{space_id}")).await

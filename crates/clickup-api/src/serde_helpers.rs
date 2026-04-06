@@ -28,14 +28,17 @@ where
         }
 
         fn visit_i64<E: de::Error>(self, v: i64) -> Result<Self::Value, E> {
+            tracing::trace!(original_type = "i64", value = v, "coerced number to string");
             Ok(v.to_string())
         }
 
         fn visit_u64<E: de::Error>(self, v: u64) -> Result<Self::Value, E> {
+            tracing::trace!(original_type = "u64", value = v, "coerced number to string");
             Ok(v.to_string())
         }
 
         fn visit_f64<E: de::Error>(self, v: f64) -> Result<Self::Value, E> {
+            tracing::trace!(original_type = "f64", value = v, "coerced float to string");
             Ok(v.to_string())
         }
     }
@@ -161,9 +164,18 @@ where
     let value = serde_json::Value::deserialize(deserializer)?;
     match &value {
         serde_json::Value::Null => Ok(None),
-        serde_json::Value::Number(n) => Ok(n.as_u64()),
-        serde_json::Value::Object(obj) => Ok(obj.get("time").and_then(|v| v.as_u64())),
-        serde_json::Value::String(s) => Ok(s.parse::<u64>().ok()),
+        serde_json::Value::Number(n) => {
+            tracing::trace!(kind = "number", "time_value type coercion");
+            Ok(n.as_u64())
+        }
+        serde_json::Value::Object(obj) => {
+            tracing::trace!(kind = "object", "time_value type coercion");
+            Ok(obj.get("time").and_then(|v| v.as_u64()))
+        }
+        serde_json::Value::String(s) => {
+            tracing::trace!(kind = "string", "time_value type coercion");
+            Ok(s.parse::<u64>().ok())
+        }
         _ => Ok(None),
     }
 }
@@ -189,10 +201,12 @@ where
         }
 
         fn visit_i64<E: de::Error>(self, v: i64) -> Result<Self::Value, E> {
+            tracing::trace!(original_type = "i64", "coerced integer to bool");
             Ok(v != 0)
         }
 
         fn visit_u64<E: de::Error>(self, v: u64) -> Result<Self::Value, E> {
+            tracing::trace!(original_type = "u64", "coerced integer to bool");
             Ok(v != 0)
         }
     }
@@ -287,7 +301,12 @@ where
 {
     let value = serde_json::Value::deserialize(deserializer)?;
     match &value {
-        serde_json::Value::Bool(false) | serde_json::Value::Null => Ok(None),
+        serde_json::Value::Bool(false) | serde_json::Value::Null => {
+            if matches!(&value, serde_json::Value::Bool(false)) {
+                tracing::trace!("maybe_false: got `false` instead of null/object");
+            }
+            Ok(None)
+        }
         _ => serde_json::from_value(value)
             .map(Some)
             .map_err(de::Error::custom),

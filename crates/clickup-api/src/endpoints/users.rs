@@ -1,9 +1,12 @@
+use tracing::instrument;
+
 use crate::client::ClickUpClient;
 use crate::error::Result;
 use crate::models::{AuthenticatedUser, User};
 
 impl ClickUpClient {
     /// Returns the authenticated user. Also serves as token validation.
+    #[instrument(skip(self))]
     pub async fn get_authenticated_user(&self) -> Result<User> {
         tracing::debug!("fetching authenticated user");
         let response: AuthenticatedUser = self.get("/user").await?;

@@ -44,6 +44,8 @@ impl RateLimiter {
         let now_ts = chrono::Utc::now().timestamp() as u64;
         let delta = reset_timestamp.saturating_sub(now_ts);
         self.reset_at = Instant::now() + Duration::from_secs(delta);
+
+        tracing::trace!(remaining, reset_in_secs = delta, "rate limit updated");
     }
 }
 

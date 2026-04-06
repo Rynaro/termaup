@@ -19,6 +19,8 @@ use crossterm::terminal::{
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 use clickup_api::auth::TokenStorage;
 use clickup_api::client::ClickUpClient;
@@ -29,27 +31,42 @@ use event::{AppEvent, DataPayload, EventHandler};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // --- Tracing to file ---
-    let log_dir = Config::config_dir();
-    std::fs::create_dir_all(&log_dir).ok();
-    let log_file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_dir.join("tui.log"))
-        .context("failed to open tui.log")?;
+    // --- Tracing to per-session file ---
+    let (log_file, _log_path) = clickup_api::logging::create_session_log_file("tui")
+        .context("failed to create session log file")?;
 
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_env("CLICKUP_LOG").unwrap_or_else(|_| EnvFilter::new("info")),
-        )
-        .with_writer(log_file)
-        .with_ansi(false)
-        .init();
+    let env_filter =
+        EnvFilter::try_from_env("CLICKUP_LOG").unwrap_or_else(|_| EnvFilter::new("info"));
+
+    let log_format = std::env::var("CLICKUP_LOG_FORMAT").unwrap_or_default();
+
+    if log_format == "pretty" {
+        let file_layer = tracing_subscriber::fmt::layer()
+            .with_writer(std::sync::Mutex::new(log_file))
+            .with_ansi(false);
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(file_layer)
+            .init();
+    } else {
+        // Default: JSON format for file (machine-readable for LLM analysis).
+        let json_layer = tracing_subscriber::fmt::layer()
+            .json()
+            .with_writer(std::sync::Mutex::new(log_file))
+            .with_ansi(false);
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(json_layer)
+            .init();
+    }
+
+    // Best-effort cleanup of old log files on startup.
+    let config = Config::load().context("failed to load configuration")?;
+    let _ = clickup_api::logging::cleanup_old_logs(config.logging.retention_days);
 
     // --- Load token and create client ---
     let token =
         TokenStorage::get_token().context("not authenticated — run `clickup auth login` first")?;
-    let config = Config::load().context("failed to load configuration")?;
     let client = ClickUpClient::with_base_url(token, config.api_base_url.clone());
 
     // --- Install panic hook that restores the terminal ---

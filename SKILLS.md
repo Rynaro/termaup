@@ -20,6 +20,7 @@ Copilot loads skills automatically when relevant to the current task.
 | 10 | TUI Tasks | `tui-tasks/` | List view, task detail, markdown |
 | 11 | TUI Polish | `tui-polish/` | Search, help, themes, caching |
 | 12 | Docs & Release | `docs-release/` | README, tests, release automation |
+| 13 | Log Analysis | `log-analysis/` | Log format, diagnosis, bug report analysis |
 
 ## Dependency Graph
 
@@ -39,6 +40,9 @@ Skill 1 (Foundation)
                                               ↓               Skill 11 (TUI Polish)
                                               ↓                    ↓
                                               └──── Skill 12 (Docs & Release) ────┘
+                                                              ↓
+                                                     Skill 13 (Log Analysis)
 ```
 
 Skill 6→7 (CLI track) and Skill 8→9→10→11 (TUI track) are parallelizable after Skill 5.
+Skill 13 (Log Analysis) can be developed independently once the logging infrastructure is in place.

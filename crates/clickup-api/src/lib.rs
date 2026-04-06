@@ -4,6 +4,7 @@ pub mod config;
 pub mod endpoints;
 pub mod error;
 pub mod filter_config;
+pub mod logging;
 pub mod models;
 pub mod pagination;
 pub mod rate_limiter;
