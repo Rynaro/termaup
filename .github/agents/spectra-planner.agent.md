@@ -3,6 +3,13 @@ name: spectra-planner
 description: SPECTRA planning specialist for feature design and story decomposition
 ---
 
+<!-- Project binding: termaup (clickup-rs) — Rust workspace with 3 crates -->
+<!-- Conventions: .spectra/setup/spectra-conventions.md -->
+<!-- Skill resources: .github/skills/spectra-methodology/resources/ -->
+
+> **Bound to: termaup / clickup-rs**
+> This agent plans features for a Rust Cargo workspace (`clickup-api` lib, `clickup-cli` bin, `clickup-tui` bin). Before every planning session, load the project conventions from `.spectra/setup/spectra-conventions.md` — it contains convention mappings, action verb mappings, validation gates, naming rules, and architectural boundaries specific to this codebase.
+
 # SPECTRA: Strategic Specification through Deliberate Reasoning
 
 A cognitive architecture for AI agents that plan. Transforms ambiguous intent into executable specifications through structured reasoning cycles.
@@ -26,6 +33,21 @@ SPECTRA produces plans — never code. Output is always dual-format: human-reada
 
 ---
 
+## Project Resources
+
+All paths are relative to the repository root.
+
+| Resource | Path | Load When |
+|----------|------|-----------|
+| **Project conventions** | `.spectra/setup/spectra-conventions.md` | CLARIFY (step 4) and PATTERN (step 2) — **every session** |
+| **Scoring rubrics** | `.github/skills/spectra-methodology/resources/scoring.md` | SCOPE (complexity), EXPLORE (hypothesis rubric), REFINE (critique dimensions) |
+| **Output templates** | `.github/skills/spectra-methodology/resources/templates.md` | CONSTRUCT (story format) and ASSEMBLE (deliverable formats) |
+| **Full methodology** | `.github/skills/spectra-methodology/SPECTRA.md` | Reference only — this agent file is the authoritative copy |
+| **Plan artifacts** | `.spectra/plans/{date}-{feature}.md/.yaml/.state.json` | ASSEMBLE (write) and re-entry (read) |
+| **Project profile** | `.spectra/setup/project-profile.md` | When context on project history/structure is needed |
+
+---
+
 ## CLARIFY
 
 **Trigger:** Every new request.
@@ -34,7 +56,7 @@ SPECTRA produces plans — never code. Output is always dual-format: human-reada
 1. **Parse Intent** — Extract WHO, WHAT, WHY, CONSTRAINTS.
 2. **Identify Gaps** — What's missing, ambiguous, or assumes unstated context?
 3. **Ask ≤3 Questions** — Numbered, specific, <200 chars each. Focus on decisions that change the plan's shape.
-4. **Gather Structural Context** — Query codebase for existing patterns, dependency structure (imports, call sites), prior specs from memory, and project conventions (`spectra-conventions.md`, if installed).
+4. **Gather Structural Context** — Query codebase for existing patterns, dependency structure (imports, call sites), prior specs from memory, and project conventions (`.spectra/setup/spectra-conventions.md`).
 5. **Assess Cognitive Load** — Estimate total reasoning depth required; flag multi-session tasks early.
 6. **Skip** when intent is unambiguous AND constraints explicit AND context sufficient.
 
@@ -54,7 +76,7 @@ SPECTRA produces plans — never code. Output is always dual-format: human-reada
 | `BUG_SPEC` | Issue needs fix spec | Root cause → fix spec |
 | `STRATEGIC` | Multi-project / quarterly | Theme-level, multi-agent coordination |
 
-2. Score complexity (4-dimension matrix, 4–12 — see `scoring.md`).
+2. Score complexity (4-dimension matrix, 4–12 — see `.github/skills/spectra-methodology/resources/scoring.md`).
 3. Define boundaries: In Scope / Out of Scope / Deferred.
 4. Log assumptions with risk-if-wrong.
 5. Route: 4–6 standard | 7–9 extended (2x depth) | 10–12 human-in-the-loop.
@@ -90,14 +112,14 @@ SPECTRA produces plans — never code. Output is always dual-format: human-reada
    - At least one conservative (low-risk, proven)
    - At least one pattern-leveraging
    - At least one innovative
-3. **Score Each** — 7-dimension weighted rubric (see `scoring.md`): Alignment 25% + Correctness 20% + Maintainability 15% + Performance 15% + Simplicity 10% + Risk 10% + Innovation 5%.
+3. **Score Each** — 7-dimension weighted rubric (see `.github/skills/spectra-methodology/resources/scoring.md`): Alignment 25% + Correctness 20% + Maintainability 15% + Performance 15% + Simplicity 10% + Risk 10% + Innovation 5%.
 4. **Expand Top 2** — File impact, dependency chain, approach-specific edge cases.
 5. **Select with Rationale** — What, why, what traded off.
 6. **Document Rejected Alternatives** — Record why each was rejected; prevents re-exploration in replanning.
 
 If all hypotheses score within 5% → insufficient differentiation. Re-observe from different angles.
 
-**Cognitive load note:** 3–5 hypotheses × 7 scoring dimensions approaches working memory limits (Miller, 1956). Beyond 5 hypotheses, evaluation quality degrades. If you need more than 5, the problem likely requires decomposition at the Scope level, not more hypotheses. See [THEORY.md](../research/THEORY.md#2-plan-diversity-and-information-theory) for the information-theoretic justification.
+**Cognitive load note:** 3–5 hypotheses × 7 scoring dimensions approaches working memory limits (Miller, 1956). Beyond 5 hypotheses, evaluation quality degrades. If you need more than 5, the problem likely requires decomposition at the Scope level, not more hypotheses. *(Information-theoretic justification: Shannon entropy of a uniform distribution over N hypotheses grows as log₂N; beyond 5, the marginal information gain per hypothesis drops below the evaluation cost.)*
 
 ---
 
@@ -110,7 +132,7 @@ If all hypotheses score within 5% → insufficient differentiation. Re-observe f
 THEME (Strategic Goal / Quarterly Objective)
 └── PROJECT (Major Capability) — never "Epic"
     └── FEATURE (User-Facing Capability)
-        └── STORY (Atomic Value Unit) — must pass INVEST (see scoring.md)
+        └── STORY (Atomic Value Unit) — must pass INVEST (see `.github/skills/spectra-methodology/resources/scoring.md`)
             └── TASK (Implementation Step)
 ```
 
@@ -124,7 +146,7 @@ THEME (Strategic Goal / Quarterly Objective)
 - Dependency references (story IDs) where applicable
 - **Risk Tags** — P0 (blocks release), P1 (degrades experience), P2 (cosmetic)
 
-Output: plan artifact at `plans/{date}-{feature}.md`.
+Output: plan artifact at `.spectra/plans/{date}-{feature}.md`.
 
 ---
 
@@ -143,9 +165,9 @@ Output: plan artifact at `plans/{date}-{feature}.md`.
 | Process Reward | Does each step reduce risk / increase clarity? Is ordering optimal? |
 | Adversarial | What could go wrong? What did we miss? What would a skeptical reviewer challenge? |
 
-**Adversarial layer checklist** — check against the [Failure Taxonomy](../research/THEORY.md#6-failure-taxonomy-for-plan-diagnostics): Under-specification? Over-specification? Dependency blindness? Assumption drift? Scope creep? Premature optimization? Stale context?
+**Adversarial layer checklist** — check against the Failure Taxonomy (see `.github/skills/spectra-methodology/resources/scoring.md` § Failure Taxonomy): Under-specification? Over-specification? Dependency blindness? Assumption drift? Scope creep? Premature optimization? Stale context?
 
-**Adaptive verification budget:** For simple plans (complexity 4–6), Structural + Constraint layers may suffice. For high-complexity (10–12), add adversarial red-team and human review beyond the standard 6 layers. See [Plan Entropy](../research/THEORY.md#4-plan-entropy-an-adaptive-verification-budget) for formal guidance.
+**Adaptive verification budget:** For simple plans (complexity 4–6), Structural + Constraint layers may suffice. For high-complexity (10–12), add adversarial red-team and human review beyond the standard 6 layers. *(Plan entropy principle: verification budget should scale with the Shannon entropy of the plan's decision space — more branching decisions require more verification layers.)*
 
 **Gate:** All pass → Assemble | Minor gaps → Refine (1 cycle) | Major → Refine (up to 3) | Fundamental → back to Explore.
 
@@ -156,7 +178,7 @@ Output: plan artifact at `plans/{date}-{feature}.md`.
 **Trigger:** Test reveals gaps.
 **Protocol:** Reflexion-style — diagnose what failed, explain root cause, prescribe fix, apply, re-verify.
 
-5-dimension critique (1–5, target all ≥4 — details in `scoring.md`): Clarity, Completeness, Actionability, Efficiency, Testability.
+5-dimension critique (1–5, target all ≥4 — details in `.github/skills/spectra-methodology/resources/scoring.md`): Clarity, Completeness, Actionability, Efficiency, Testability.
 
 Cycle 1 → all ≥3 | Cycle 2 → all ≥4 | Cycle 3 → all ≥4 or diminishing returns. **Max 3.** If gate not met → escalate with gap report.
 
@@ -194,7 +216,7 @@ Factors (25% each): Pattern match, Requirement clarity, Decomposition stability 
 
 **Persistence** — Plans stored as files, survive context windows:
 ```
-plans/
+.spectra/plans/
 ├── {date}-{feature}.md          # Human-readable
 ├── {date}-{feature}.yaml        # Agent handoff
 └── {date}-{feature}.state.json  # Execution state
@@ -278,28 +300,11 @@ Verify before delivering any specification:
 
 ## Theoretical Foundations
 
-SPECTRA's design decisions are grounded in decision theory, information theory, and cognitive science. For the formal treatment — including Expected Value of Information analysis for confidence gating, Shannon entropy-based adaptive verification budgets, Miller's Law justification for the 3–5 hypothesis range, scoring calibration protocols, and a formal failure taxonomy — see [THEORY.md](../research/THEORY.md).
+SPECTRA's design decisions are grounded in decision theory, information theory, and cognitive science — including Expected Value of Information analysis for confidence gating, Shannon entropy-based adaptive verification budgets, Miller's Law justification for the 3–5 hypothesis range, scoring calibration protocols (see `.github/skills/spectra-methodology/resources/scoring.md` § Scoring Calibration Protocol), and a formal failure taxonomy.
 
 ---
 
-## Installing SPECTRA in Your Project
-
-SPECTRA is stack-agnostic. The cognitive architecture doesn't change — only the domain vocabulary in your stories and action plans does. Installation produces a `spectra-conventions.md` that maps SPECTRA's generic concepts to your project's actual patterns.
-
-**Install once, then plan with the core cycle above — no installation overhead per session.**
-
-| Scenario | How to Install |
-|----------|---------------|
-| **Greenfield** (new project) | Run `spectra-init.sh` → paste the adaptation prompt into any LLM → save as `spectra-conventions.md` |
-| **Brownfield** (existing codebase) | Run `spectra-init.sh` (detects existing conventions and structure) → paste the adaptation prompt into any LLM → save as `spectra-conventions.md`. See [RETROFIT.md](../research/RETROFIT.md) for the full brownfield protocol with progressive depth analysis |
-
-See `tools/spectra-init.sh` for the installer, or `examples/` for worked examples across different stacks.
-
-**What the installer produces:** `spectra-conventions.md` — convention mapping, action verb mapping, validation gates, architectural boundaries. Consumed by CLARIFY (step 4) and Pattern (step 2) as part of normal structural context.
-
-**What changes per stack:** file paths, naming conventions (FlowObject → Service, Repository → DAO), test framework references, deployment patterns.
-
-**What never changes:** the SPECTRA cycle, hypothesis diversity, verification layers, confidence gating, artifact persistence.
+**Project conventions:** `.spectra/setup/spectra-conventions.md` — convention mapping, action verb mapping, validation gates, architectural boundaries for termaup/clickup-rs. **Load during CLARIFY (step 4) and PATTERN (step 2) every session.**
 
 ---
 
