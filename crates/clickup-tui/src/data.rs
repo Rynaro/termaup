@@ -247,6 +247,111 @@ pub fn spawn_create_comment_reply(
     });
 }
 
+/// Updates an existing comment's text and sends the result.
+///
+/// For top-level comments (`parent_comment_id` is `None`), uses
+/// `PUT /comment/{id}`.  For replies, the ClickUp API does not support
+/// PUT on reply IDs, so we delete the old reply and create a new one on
+/// the same thread.
+pub fn spawn_update_comment(
+    client: &ClickUpClient,
+    tx: &mpsc::UnboundedSender<AppEvent>,
+    comment_id: &str,
+    new_text: &str,
+    parent_comment_id: Option<&str>,
+) {
+    let client = client.clone();
+    let tx = tx.clone();
+    let comment_id = comment_id.to_string();
+    let new_text = new_text.to_string();
+    let parent_comment_id = parent_comment_id.map(|s| s.to_string());
+    tokio::spawn(async move {
+        if let Some(parent_id) = parent_comment_id {
+            // Reply edit: delete old reply, create new one on the same thread.
+            tracing::debug!(%comment_id, %parent_id, "editing reply via delete+recreate");
+            if let Err(e) = client.delete_comment(&comment_id).await {
+                let _ = tx.send(AppEvent::Error(format!("Failed to edit reply: {e}")));
+                return;
+            }
+            let request = clickup_api::models::CreateCommentRequest {
+                comment_text: new_text.clone(),
+                notify_all: None,
+            };
+            match client.create_comment_reply(&parent_id, &request).await {
+                Ok(mut reply) => {
+                    if reply.comment_text.is_empty() {
+                        reply.comment_text = new_text;
+                    }
+                    // Send delete of old + creation of new reply.
+                    let _ = tx.send(AppEvent::DataLoaded(Box::new(
+                        DataPayload::CommentDeleted {
+                            comment_id,
+                            parent_comment_id: Some(parent_id.clone()),
+                        },
+                    )));
+                    let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::ReplyCreated {
+                        parent_comment_id: parent_id,
+                        reply: Box::new(reply),
+                    })));
+                }
+                Err(e) => {
+                    let _ = tx.send(AppEvent::Error(format!("Failed to recreate reply: {e}")));
+                }
+            }
+        } else {
+            // Top-level comment: use PUT directly.
+            tracing::debug!(%comment_id, "updating comment");
+            let request = clickup_api::models::UpdateCommentRequest {
+                comment_text: new_text.clone(),
+                assignee: None,
+                resolved: None,
+            };
+            match client.update_comment(&comment_id, &request).await {
+                Ok(()) => {
+                    let _ = tx.send(AppEvent::DataLoaded(Box::new(
+                        DataPayload::CommentUpdated {
+                            comment_id,
+                            new_text,
+                        },
+                    )));
+                }
+                Err(e) => {
+                    let _ = tx.send(AppEvent::Error(format!("Failed to update comment: {e}")));
+                }
+            }
+        }
+    });
+}
+
+/// Deletes a comment and sends the result.
+pub fn spawn_delete_comment(
+    client: &ClickUpClient,
+    tx: &mpsc::UnboundedSender<AppEvent>,
+    comment_id: &str,
+    parent_comment_id: Option<&str>,
+) {
+    let client = client.clone();
+    let tx = tx.clone();
+    let comment_id = comment_id.to_string();
+    let parent_comment_id = parent_comment_id.map(|s| s.to_string());
+    tokio::spawn(async move {
+        tracing::debug!(%comment_id, "deleting comment");
+        match client.delete_comment(&comment_id).await {
+            Ok(()) => {
+                let _ = tx.send(AppEvent::DataLoaded(Box::new(
+                    DataPayload::CommentDeleted {
+                        comment_id,
+                        parent_comment_id,
+                    },
+                )));
+            }
+            Err(e) => {
+                let _ = tx.send(AppEvent::Error(format!("Failed to delete comment: {e}")));
+            }
+        }
+    });
+}
+
 /// Loads a single page of tasks with optional filters.
 pub fn spawn_load_tasks_page(
     client: &ClickUpClient,

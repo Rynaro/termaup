@@ -529,9 +529,15 @@ fn handle_task_detail(
     client: &ClickUpClient,
     tx: &mpsc::UnboundedSender<AppEvent>,
 ) {
-    use crate::app::CommentInputMode;
+    use crate::app::{CommentInputMode, CommentItem};
 
-    // When composing a comment, route all input to the compose handler.
+    // When a delete confirmation is active, handle it first.
+    if app.delete_confirm_target.is_some() {
+        handle_delete_confirm(app, key, client, tx);
+        return;
+    }
+
+    // When composing/editing a comment, route all input to the compose handler.
     if app.comment_input_mode != CommentInputMode::Browse {
         handle_comment_compose(app, key, client, tx);
         return;
@@ -539,6 +545,9 @@ fn handle_task_detail(
 
     // When sidebar is open and in browse mode, handle comment navigation.
     if app.comment_sidebar_open {
+        let visible = app.visible_comment_items();
+        let visible_count = visible.len();
+
         match key.code {
             KeyCode::Esc => {
                 // Close sidebar first; if already closed, go back.
@@ -549,8 +558,8 @@ fn handle_task_detail(
                 app.toggle_comment_sidebar();
             }
             KeyCode::Down | KeyCode::Char('j') => {
-                if !app.comments.is_empty() {
-                    let max = app.comments.len().saturating_sub(1);
+                if visible_count > 0 {
+                    let max = visible_count.saturating_sub(1);
                     app.selected_comment_index = (app.selected_comment_index + 1).min(max);
                 }
             }
@@ -562,27 +571,98 @@ fn handle_task_detail(
                 app.comment_input_text.clear();
             }
             KeyCode::Char('R') => {
-                // Reply to the selected comment.
-                if let Some(comment) = app.comments.get(app.selected_comment_index) {
-                    app.reply_target_id = Some(comment.id.clone());
-                    app.comment_input_mode = CommentInputMode::Reply;
-                    app.comment_input_text.clear();
+                // Reply to the selected item's thread.
+                if let Some(item) = visible.get(app.selected_comment_index) {
+                    let reply_id = match item {
+                        CommentItem::TopLevel { index } => {
+                            app.comments.get(*index).map(|c| c.id.clone())
+                        }
+                        CommentItem::Reply { parent_index, .. } => {
+                            app.comments.get(*parent_index).map(|c| c.id.clone())
+                        }
+                    };
+                    if let Some(id) = reply_id {
+                        app.reply_target_id = Some(id);
+                        app.comment_input_mode = CommentInputMode::Reply;
+                        app.comment_input_text.clear();
+                    }
                 }
             }
             KeyCode::Enter => {
-                // Toggle thread expansion for the selected comment.
-                if let Some(comment) = app.comments.get(app.selected_comment_index)
+                // Toggle thread expansion (only for top-level comments).
+                if let Some(CommentItem::TopLevel { index }) =
+                    visible.get(app.selected_comment_index)
+                    && let Some(comment) = app.comments.get(*index)
                     && comment.reply_count > 0
                 {
                     let id = comment.id.clone();
                     if app.expanded_comments.contains(&id) {
                         app.expanded_comments.remove(&id);
                     } else {
-                        // Fetch replies if not already cached.
                         if !app.comment_replies.contains_key(&id) {
                             data::spawn_load_comment_replies(client, tx, &id);
                         }
                         app.expanded_comments.insert(id);
+                    }
+                }
+            }
+            KeyCode::Char('e') => {
+                // Edit the selected comment (ownership check).
+                if let Some(item) = visible.get(app.selected_comment_index) {
+                    // ClickUp API does not support PUT or DELETE on reply IDs
+                    // (returns 401), so editing replies is not possible.
+                    if matches!(item, CommentItem::Reply { .. }) {
+                        app.error_message = Some(
+                            "Editing reply comments is not supported by the ClickUp API"
+                                .to_string(),
+                        );
+                        app.error_set_at = Some(std::time::Instant::now());
+                        return;
+                    }
+                    let info = app
+                        .resolve_comment_item(item)
+                        .map(|c| (c.id.clone(), c.comment_text.clone(), app.is_own_comment(c)));
+                    let parent_id = app.parent_id_for_item(item);
+                    if let Some((id, text, is_own)) = info {
+                        if is_own {
+                            app.editing_comment_id = Some(id);
+                            app.editing_parent_id = parent_id;
+                            app.comment_input_text = text;
+                            app.comment_input_mode = CommentInputMode::EditComment;
+                        } else {
+                            app.error_message =
+                                Some("You can only edit your own comments".to_string());
+                            app.error_set_at = Some(std::time::Instant::now());
+                        }
+                    }
+                }
+            }
+            KeyCode::Char('d') => {
+                // Delete the selected comment (ownership check).
+                if let Some(item) = visible.get(app.selected_comment_index) {
+                    // ClickUp API does not support DELETE on reply IDs
+                    // (returns 401), so deleting replies is not possible.
+                    if matches!(item, CommentItem::Reply { .. }) {
+                        app.error_message = Some(
+                            "Deleting reply comments is not supported by the ClickUp API"
+                                .to_string(),
+                        );
+                        app.error_set_at = Some(std::time::Instant::now());
+                        return;
+                    }
+                    let info = app
+                        .resolve_comment_item(item)
+                        .map(|c| (c.id.clone(), app.is_own_comment(c)));
+                    let parent_id = app.parent_id_for_item(item);
+                    if let Some((id, is_own)) = info {
+                        if is_own {
+                            app.delete_confirm_target = Some(id);
+                            app.delete_confirm_parent = parent_id;
+                        } else {
+                            app.error_message =
+                                Some("You can only delete your own comments".to_string());
+                            app.error_set_at = Some(std::time::Instant::now());
+                        }
                     }
                 }
             }
@@ -623,6 +703,27 @@ fn handle_task_detail(
     }
 }
 
+fn handle_delete_confirm(
+    app: &mut App,
+    key: KeyEvent,
+    client: &ClickUpClient,
+    tx: &mpsc::UnboundedSender<AppEvent>,
+) {
+    match key.code {
+        KeyCode::Char('y') | KeyCode::Char('Y') => {
+            if let Some(comment_id) = app.delete_confirm_target.take() {
+                let parent_id = app.delete_confirm_parent.take();
+                data::spawn_delete_comment(client, tx, &comment_id, parent_id.as_deref());
+            }
+        }
+        _ => {
+            // Any other key cancels the confirmation.
+            app.delete_confirm_target = None;
+            app.delete_confirm_parent = None;
+        }
+    }
+}
+
 fn handle_comment_compose(
     app: &mut App,
     key: KeyEvent,
@@ -637,9 +738,11 @@ fn handle_comment_compose(
             app.comment_input_mode = CommentInputMode::Browse;
             app.comment_input_text.clear();
             app.reply_target_id = None;
+            app.editing_comment_id = None;
+            app.editing_parent_id = None;
         }
         KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            // Submit the comment or reply.
+            // Submit the comment, reply, or edit.
             let text = app.comment_input_text.trim().to_string();
             if !text.is_empty() {
                 match &app.comment_input_mode {
@@ -653,12 +756,44 @@ fn handle_comment_compose(
                             data::spawn_create_comment(client, tx, &task.id, &text);
                         }
                     }
+                    CommentInputMode::EditComment => {
+                        if let Some(ref comment_id) = app.editing_comment_id {
+                            // Use the stored editing_parent_id (captured when
+                            // the user pressed 'e') as primary source. Fall
+                            // back to a cache lookup in comment_replies in case
+                            // the stored value was cleared by an async event.
+                            let parent_id: Option<String> =
+                                app.editing_parent_id.clone().or_else(|| {
+                                    app.comment_replies.iter().find_map(|(pid, replies)| {
+                                        replies
+                                            .iter()
+                                            .any(|r| r.id == *comment_id)
+                                            .then(|| pid.clone())
+                                    })
+                                });
+                            tracing::debug!(
+                                %comment_id,
+                                ?parent_id,
+                                stored_parent = ?app.editing_parent_id,
+                                "submitting comment edit"
+                            );
+                            data::spawn_update_comment(
+                                client,
+                                tx,
+                                comment_id,
+                                &text,
+                                parent_id.as_deref(),
+                            );
+                        }
+                    }
                     CommentInputMode::Browse => {}
                 }
             }
             app.comment_input_mode = CommentInputMode::Browse;
             app.comment_input_text.clear();
             app.reply_target_id = None;
+            app.editing_comment_id = None;
+            app.editing_parent_id = None;
         }
         KeyCode::Enter => {
             app.comment_input_text.push('\n');

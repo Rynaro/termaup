@@ -49,6 +49,19 @@ pub struct CreateCommentRequest {
     pub notify_all: Option<bool>,
 }
 
+/// Request body for updating an existing comment.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateCommentRequest {
+    /// Updated plain-text comment body.
+    pub comment_text: String,
+    /// User ID to assign the comment to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assignee: Option<i64>,
+    /// Whether the comment is resolved.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resolved: Option<bool>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -214,6 +227,38 @@ mod tests {
         assert!(
             value.get("notify_all").is_none(),
             "notify_all should be omitted when None"
+        );
+    }
+
+    #[test]
+    fn test_serialize_update_comment_request_full() {
+        let req = UpdateCommentRequest {
+            comment_text: "Updated text".to_string(),
+            assignee: Some(12345),
+            resolved: Some(true),
+        };
+        let value = serde_json::to_value(&req).expect("serialize update request");
+        assert_eq!(value["comment_text"], "Updated text");
+        assert_eq!(value["assignee"], 12345);
+        assert_eq!(value["resolved"], true);
+    }
+
+    #[test]
+    fn test_serialize_update_comment_request_text_only() {
+        let req = UpdateCommentRequest {
+            comment_text: "Just editing text".to_string(),
+            assignee: None,
+            resolved: None,
+        };
+        let value = serde_json::to_value(&req).expect("serialize update request text only");
+        assert_eq!(value["comment_text"], "Just editing text");
+        assert!(
+            value.get("assignee").is_none(),
+            "assignee should be omitted when None"
+        );
+        assert!(
+            value.get("resolved").is_none(),
+            "resolved should be omitted when None"
         );
     }
 }

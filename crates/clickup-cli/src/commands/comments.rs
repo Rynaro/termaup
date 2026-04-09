@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use clap::Subcommand;
 
-use clickup_api::models::CreateCommentRequest;
+use clickup_api::models::{CreateCommentRequest, UpdateCommentRequest};
 
 use crate::client_factory::create_client;
 use crate::output;
@@ -39,6 +39,24 @@ pub enum CommentCommands {
         #[arg(long, default_value_t = false)]
         notify_all: bool,
     },
+    /// Edit an existing comment's text.
+    Edit {
+        /// Comment ID to edit.
+        #[arg(long)]
+        comment: String,
+        /// New comment text.
+        #[arg(short, long)]
+        message: String,
+    },
+    /// Delete a comment permanently.
+    Delete {
+        /// Comment ID to delete.
+        #[arg(long)]
+        comment: String,
+        /// Skip confirmation prompt.
+        #[arg(long, default_value_t = false)]
+        yes: bool,
+    },
 }
 
 impl CommentCommands {
@@ -56,6 +74,12 @@ impl CommentCommands {
                 message,
                 notify_all,
             } => reply_comment(format, workspace_override, &comment, &message, notify_all).await,
+            Self::Edit { comment, message } => {
+                edit_comment(workspace_override, &comment, &message).await
+            }
+            Self::Delete { comment, yes } => {
+                delete_comment(workspace_override, &comment, yes).await
+            }
         }
     }
 }
@@ -201,6 +225,59 @@ async fn reply_comment(
         .context("failed to create reply")?;
 
     output::success(&format!("Reply created (ID: {})", reply.id));
+    Ok(())
+}
+
+async fn edit_comment(
+    workspace_override: Option<&str>,
+    comment_id: &str,
+    message: &str,
+) -> Result<()> {
+    let (client, _config) = create_client(workspace_override)?;
+
+    let request = UpdateCommentRequest {
+        comment_text: message.to_string(),
+        assignee: None,
+        resolved: None,
+    };
+
+    client
+        .update_comment(comment_id, &request)
+        .await
+        .context("failed to edit comment")?;
+
+    output::success(&format!("Comment updated (ID: {comment_id})"));
+    Ok(())
+}
+
+async fn delete_comment(
+    workspace_override: Option<&str>,
+    comment_id: &str,
+    skip_confirm: bool,
+) -> Result<()> {
+    if !skip_confirm {
+        let confirmed = dialoguer::Confirm::new()
+            .with_prompt(format!(
+                "Are you sure you want to delete comment {comment_id}? This cannot be undone"
+            ))
+            .default(false)
+            .interact()
+            .context("failed to read confirmation")?;
+
+        if !confirmed {
+            output::info("Delete cancelled");
+            return Ok(());
+        }
+    }
+
+    let (client, _config) = create_client(workspace_override)?;
+
+    client
+        .delete_comment(comment_id)
+        .await
+        .context("failed to delete comment")?;
+
+    output::success(&format!("Comment deleted (ID: {comment_id})"));
     Ok(())
 }
 

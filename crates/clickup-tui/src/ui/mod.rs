@@ -220,6 +220,10 @@ fn render_screen(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) {
                     .split(area);
                 task_detail::render(app, frame, split[0]);
                 comment_sidebar::render(app, frame, split[1]);
+                // Render the delete confirmation overlay on top of the sidebar.
+                if app.delete_confirm_target.is_some() {
+                    comment_sidebar::render_delete_confirm(frame, split[1]);
+                }
             } else {
                 task_detail::render(app, frame, area);
             }
@@ -308,10 +312,15 @@ fn key_hints(app: &App) -> Vec<(&'static str, &'static str)> {
             hints.push(("r", "Refresh"));
         }
         Screen::TaskDetail => {
-            if app.comment_sidebar_open {
+            if app.delete_confirm_target.is_some() {
+                hints.push(("y", "Confirm delete"));
+                hints.push(("n", "Cancel"));
+            } else if app.comment_sidebar_open {
                 hints.push(("↑/k", "Nav comments"));
                 hints.push(("↓/j", "Nav comments"));
                 hints.push(("n", "New comment"));
+                hints.push(("e", "Edit"));
+                hints.push(("d", "Delete"));
                 hints.push(("c", "Close comments"));
                 hints.push(("Esc", "Back"));
             } else {

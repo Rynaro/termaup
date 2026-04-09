@@ -132,6 +132,23 @@ ClickUp adds new fields to responses without API versioning. Fields like `permis
 
 **Fix**: Serde's default behavior ignores unknown fields. Do NOT use `#[serde(deny_unknown_fields)]`.
 
+### 11. PUT and DELETE /comment/{id} Only Work on Top-Level Comments
+
+`PUT /comment/{comment_id}` and `DELETE /comment/{comment_id}` succeed for
+top-level task comments but return `401 "Oauth token not found"` when called with
+a threaded reply ID. These endpoints only support task-level comments, not reply
+comments.
+
+Additionally, even for top-level comments, the PUT response body is sparse and
+omits the `id` field, so it cannot be deserialized as a `Comment`.
+
+**Fix**: Use `put_no_body()` for top-level comment edits and carry the new text
+locally. For replies, editing and deleting are not supported by the ClickUp API —
+block these operations in the UI with a clear message. If ClickUp adds reply
+mutation support in a future API version, the delete-and-recreate strategy
+(`DELETE /comment/{reply_id}` followed by `POST /comment/{parent_id}/reply`)
+would be the approach for editing.
+
 ## Serde Helper Reference
 
 | Helper | Purpose | Use on |

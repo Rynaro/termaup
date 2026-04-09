@@ -196,6 +196,66 @@ fn handle_data(app: &mut App, payload: DataPayload) {
             app.comment_input_text.clear();
             app.reply_target_id = None;
         }
+        DataPayload::CommentUpdated {
+            comment_id,
+            new_text,
+        } => {
+            // Update the comment in top-level comments or in replies.
+            if let Some(existing) = app.comments.iter_mut().find(|c| c.id == comment_id) {
+                existing.comment_text = new_text.clone();
+            } else {
+                // Search in reply caches.
+                for replies in app.comment_replies.values_mut() {
+                    if let Some(reply) = replies.iter_mut().find(|r| r.id == comment_id) {
+                        reply.comment_text = new_text.clone();
+                        break;
+                    }
+                }
+            }
+            // Only reset editing state if this update matches the comment
+            // currently being edited — a stale event from a previous edit
+            // must not clobber an in-progress edit session.
+            let matches_current = app
+                .editing_comment_id
+                .as_deref()
+                .is_some_and(|id| id == comment_id);
+            if matches_current || app.editing_comment_id.is_none() {
+                app.comment_input_mode = app::CommentInputMode::Browse;
+                app.comment_input_text.clear();
+                app.editing_comment_id = None;
+                app.editing_parent_id = None;
+            }
+        }
+        DataPayload::CommentDeleted {
+            comment_id,
+            parent_comment_id,
+        } => {
+            if let Some(parent_id) = parent_comment_id {
+                // It was a reply — remove from the reply cache.
+                if let Some(replies) = app.comment_replies.get_mut(&parent_id) {
+                    replies.retain(|r| r.id != comment_id);
+                }
+                // Decrement reply_count on the parent comment.
+                if let Some(parent) = app.comments.iter_mut().find(|c| c.id == parent_id) {
+                    parent.reply_count = parent.reply_count.saturating_sub(1);
+                }
+            } else {
+                // It was a top-level comment — remove from main list.
+                app.comments.retain(|c| c.id != comment_id);
+                // Also remove cached replies for this comment.
+                app.comment_replies.remove(&comment_id);
+                app.expanded_comments.remove(&comment_id);
+            }
+            // Clamp selection index.
+            let visible_count = app.visible_comment_items().len();
+            if visible_count == 0 {
+                app.selected_comment_index = 0;
+            } else if app.selected_comment_index >= visible_count {
+                app.selected_comment_index = visible_count - 1;
+            }
+            app.delete_confirm_target = None;
+            app.delete_confirm_parent = None;
+        }
         DataPayload::TasksPage {
             tasks,
             page,
