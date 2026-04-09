@@ -250,6 +250,10 @@ pub struct App {
     pub mention_picker_filter: String,
     /// Currently highlighted row in the picker list.
     pub mention_picker_selected: usize,
+    /// Resolved mentions inserted via the picker: maps the username token
+    /// (as inserted into `comment_input_text` after `@`) to the user's ID.
+    /// Supports multi-word display names correctly at submit time.
+    pub comment_mention_map: HashMap<String, i64>,
 
     // --- UI state ---
     /// Error message to display (auto-dismisses).
@@ -330,6 +334,7 @@ impl App {
             mention_picker_active: false,
             mention_picker_filter: String::new(),
             mention_picker_selected: 0,
+            comment_mention_map: HashMap::new(),
             error_message: None,
             error_set_at: None,
             loading: false,
@@ -654,6 +659,7 @@ impl App {
         self.mention_picker_active = false;
         self.mention_picker_filter.clear();
         self.mention_picker_selected = 0;
+        self.comment_mention_map.clear();
     }
 
     /// Returns workspace members whose username contains `filter` (case-insensitive).
@@ -695,6 +701,7 @@ impl App {
             self.delete_confirm_target = None;
             self.delete_confirm_parent = None;
             self.dismiss_mention_picker();
+            self.comment_mention_map.clear();
         }
     }
 

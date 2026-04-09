@@ -120,7 +120,7 @@ pub fn resolve_mentions(text: &str, members: &[WorkspaceMember]) -> MentionResol
                                 username: None,
                                 email: None,
                             },
-                            text: Some(format!("@{username}")),
+                            text: None,
                         });
                         resolved.push(username);
                     } else {

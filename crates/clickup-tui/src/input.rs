@@ -782,6 +782,7 @@ fn handle_comment_compose(
                 let members = app.filtered_members();
                 if let Some(member) = members.get(app.mention_picker_selected) {
                     let username = member.user.username.clone();
+                    let user_id = member.user.id;
                     // Replace the `@{filter}` fragment in the input text with
                     // `@username ` (trailing space for ergonomics).
                     let filter = app.mention_picker_filter.clone();
@@ -794,6 +795,9 @@ fn handle_comment_compose(
                     app.comment_input_text.push('@');
                     app.comment_input_text.push_str(&username);
                     app.comment_input_text.push(' ');
+                    // Store the exact token → user_id so submit-time resolution
+                    // handles multi-word display names without re-scanning.
+                    app.comment_mention_map.insert(username, user_id);
                     app.dismiss_mention_picker();
                 }
                 return;
@@ -831,20 +835,17 @@ fn handle_comment_compose(
             // Submit the comment, reply, or edit.
             let text = app.comment_input_text.trim().to_string();
             if !text.is_empty() {
-                // Resolve @mention tokens against workspace members.
+                // Build structured content using picker-inserted mention map
+                // (handles multi-word display names) with member-list fallback
+                // for any @tokens typed manually without the picker.
                 let members = app
                     .current_workspace
                     .as_ref()
                     .map(|ws| ws.members.as_slice())
                     .unwrap_or_default();
-                let resolution =
-                    clickup_api::models::resolve_mentions(&text, members);
-                if !resolution.unresolved.is_empty() {
-                    tracing::warn!(
-                        unresolved = ?resolution.unresolved,
-                        "comment contains unresolved @mentions — sending as plain text"
-                    );
-                }
+                let comment_content =
+                    build_tui_comment_content(&text, &app.comment_mention_map, members);
+                app.comment_mention_map.clear();
 
                 match &app.comment_input_mode {
                     CommentInputMode::Reply => {
@@ -854,7 +855,7 @@ fn handle_comment_compose(
                                 tx,
                                 target_id,
                                 &text,
-                                resolution.comment_content,
+                                comment_content,
                             );
                         }
                     }
@@ -865,7 +866,7 @@ fn handle_comment_compose(
                                 tx,
                                 &task.id,
                                 &text,
-                                resolution.comment_content,
+                                comment_content,
                             );
                         }
                     }
@@ -1095,4 +1096,115 @@ fn load_saved_filters(app: &mut App, list_id: &str) {
             app.view_mode = Default::default();
         }
     }
+}
+
+/// Builds structured comment content for TUI submission.
+///
+/// Uses `mention_map` (populated by the mention picker) for primary resolution.
+/// Longest-match is used so multi-word display names (e.g. "John Doe") are
+/// handled correctly. Falls back to scanning the `members` list for any `@token`
+/// that is not in the map (covers manually typed mentions).
+///
+/// Returns an empty `Vec` when `text` contains no `@` character, letting
+/// `comment_text` carry the content for plain-text comments.
+fn build_tui_comment_content(
+    text: &str,
+    mention_map: &std::collections::HashMap<String, i64>,
+    members: &[clickup_api::models::WorkspaceMember],
+) -> Vec<clickup_api::models::CommentContentItem> {
+    use clickup_api::models::comment::{CommentContentItem, TaggedUser};
+
+    if !text.contains('@') {
+        return vec![];
+    }
+
+    let mut content: Vec<CommentContentItem> = Vec::new();
+    let chars: Vec<char> = text.chars().collect();
+    let mut i = 0usize;
+    let mut segment_start = 0usize;
+
+    // Sort map keys longest-first for greedy matching.
+    let mut map_keys: Vec<&String> = mention_map.keys().collect();
+    map_keys.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
+
+    while i < chars.len() {
+        if chars[i] == '@' {
+            let at_boundary = i == 0 || chars[i - 1].is_whitespace();
+            if at_boundary {
+                // --- Try mention_map longest-match first ---
+                let rest: String = chars[i + 1..].iter().collect();
+                let mut matched: Option<(usize, i64)> = None; // (char_len, user_id)
+                for key in &map_keys {
+                    if rest.starts_with(key.as_str()) {
+                        let end = i + 1 + key.chars().count();
+                        // The match must end at a word boundary (end of text or whitespace).
+                        if end >= chars.len() || chars[end].is_whitespace() {
+                            matched = Some((key.chars().count(), mention_map[*key]));
+                            break;
+                        }
+                    }
+                }
+                if let Some((token_len, user_id)) = matched {
+                    let preceding: String = chars[segment_start..i].iter().collect();
+                    if !preceding.is_empty() {
+                        content.push(CommentContentItem::Text {
+                            text: preceding,
+                            attributes: None,
+                        });
+                    }
+                    content.push(CommentContentItem::Tag {
+                        content_type: "tag".to_string(),
+                        user: TaggedUser { id: user_id, username: None, email: None },
+                        text: None,
+                    });
+                    let end = i + 1 + token_len;
+                    segment_start = end;
+                    i = end;
+                    continue;
+                }
+
+                // --- Fallback: alphanumeric scanner + member list ---
+                let token_start = i + 1;
+                let mut j = token_start;
+                while j < chars.len()
+                    && (chars[j].is_alphanumeric()
+                        || chars[j] == '_'
+                        || chars[j] == '-'
+                        || chars[j] == '.')
+                {
+                    j += 1;
+                }
+                let username: String = chars[token_start..j].iter().collect();
+                if !username.is_empty() {
+                    let member = members
+                        .iter()
+                        .find(|m| m.user.username.eq_ignore_ascii_case(&username));
+                    if let Some(m) = member {
+                        let preceding: String = chars[segment_start..i].iter().collect();
+                        if !preceding.is_empty() {
+                            content.push(CommentContentItem::Text {
+                                text: preceding,
+                                attributes: None,
+                            });
+                        }
+                        content.push(CommentContentItem::Tag {
+                            content_type: "tag".to_string(),
+                            user: TaggedUser { id: m.user.id, username: None, email: None },
+                            text: None,
+                        });
+                        segment_start = j;
+                        i = j;
+                        continue;
+                    }
+                }
+            }
+        }
+        i += 1;
+    }
+
+    let tail: String = chars[segment_start..].iter().collect();
+    if !tail.is_empty() {
+        content.push(CommentContentItem::Text { text: tail, attributes: None });
+    }
+    content
 }

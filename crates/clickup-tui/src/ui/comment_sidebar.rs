@@ -105,6 +105,9 @@ fn render_comment_body_lines<'a>(
 }
 
 /// Highlights `@username` tokens in raw text with cyan+bold styling.
+///
+/// Used for received comment bodies where no mention map is available;
+/// uses an alphanumeric-only token scanner.
 fn highlight_at_mentions_in_text(text: &str, base_style: Style) -> Vec<Span<'_>> {
     let mut spans: Vec<Span<'_>> = Vec::new();
     let mut last = 0;
@@ -143,6 +146,101 @@ fn highlight_at_mentions_in_text(text: &str, base_style: Style) -> Vec<Span<'_>>
     }
     if last < len {
         spans.push(Span::styled(&text[last..], base_style));
+    }
+    spans
+}
+
+/// Highlights `@mention` tokens in compose input text using `mention_map` for
+/// longest-match (handles multi-word display names), with alphanumeric scanner
+/// as fallback for manually typed tokens.
+fn highlight_compose_mentions<'a>(
+    text: &'a str,
+    base_style: Style,
+    mention_map: &std::collections::HashMap<String, i64>,
+) -> Vec<Span<'a>> {
+    let mut spans: Vec<Span<'a>> = Vec::new();
+    let chars: Vec<char> = text.chars().collect();
+    let len = chars.len();
+    let mut i = 0usize;
+    let mut last_byte = 0usize;
+
+    // Sort keys longest-first for greedy match.
+    let mut map_keys: Vec<&String> = mention_map.keys().collect();
+    map_keys.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
+
+    // Track byte offset alongside char index.
+    let char_byte_offsets: Vec<usize> = {
+        let mut offsets = vec![0usize; len + 1];
+        let mut byte = 0;
+        for (idx, c) in chars.iter().enumerate() {
+            offsets[idx] = byte;
+            byte += c.len_utf8();
+        }
+        offsets[len] = byte;
+        offsets
+    };
+
+    let mention_style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+
+    while i < len {
+        if chars[i] == '@' {
+            let at_boundary = i == 0 || chars[i - 1].is_whitespace();
+            if at_boundary {
+                // Try mention_map longest-match.
+                let rest: String = chars[i + 1..].iter().collect();
+                let mut matched_chars: Option<usize> = None;
+                for key in &map_keys {
+                    if rest.starts_with(key.as_str()) {
+                        let end = i + 1 + key.chars().count();
+                        if end >= len || chars[end].is_whitespace() {
+                            matched_chars = Some(key.chars().count());
+                            break;
+                        }
+                    }
+                }
+                if let Some(token_chars) = matched_chars {
+                    let end = i + 1 + token_chars;
+                    let start_byte = char_byte_offsets[i];
+                    let end_byte = char_byte_offsets[end];
+                    if start_byte > last_byte {
+                        spans.push(Span::styled(&text[last_byte..start_byte], base_style));
+                    }
+                    spans.push(Span::styled(&text[start_byte..end_byte], mention_style));
+                    last_byte = end_byte;
+                    i = end;
+                    continue;
+                }
+
+                // Fallback: alphanumeric scanner.
+                let token_start = i + 1;
+                let mut j = token_start;
+                while j < len
+                    && (chars[j].is_alphanumeric()
+                        || chars[j] == '_'
+                        || chars[j] == '-'
+                        || chars[j] == '.')
+                {
+                    j += 1;
+                }
+                if j > token_start {
+                    let start_byte = char_byte_offsets[i];
+                    let end_byte = char_byte_offsets[j];
+                    if start_byte > last_byte {
+                        spans.push(Span::styled(&text[last_byte..start_byte], base_style));
+                    }
+                    spans.push(Span::styled(&text[start_byte..end_byte], mention_style));
+                    last_byte = end_byte;
+                    i = j;
+                    continue;
+                }
+            }
+        }
+        i += 1;
+    }
+
+    let total_bytes = char_byte_offsets[len];
+    if last_byte < total_bytes {
+        spans.push(Span::styled(&text[last_byte..], base_style));
     }
     spans
 }
@@ -426,7 +524,7 @@ fn render_input_area(app: &App, frame: &mut Frame, area: Rect) {
         for (i, line) in lines_iter.into_iter().enumerate() {
             let is_last = i == total - 1;
             let mut spans = vec![Span::raw(" ")];
-            spans.extend(highlight_at_mentions_in_text(line, base_fg));
+            spans.extend(highlight_compose_mentions(line, base_fg, &app.comment_mention_map));
             if is_last {
                 spans.push(Span::styled("█", base_fg));
             }
