@@ -1,0 +1,119 @@
+metadata:
+  spec_id: "SPEC-2026-04-09-001"
+  title: "Comment Compose Keystroke Rework"
+  confidence: 92
+  complexity: 5
+  spectra_version: "4.2.0"
+  created: "2026-04-09"
+
+projects:
+  - id: "P-1"
+    name: "Comment Compose Keystroke Rework"
+    features:
+      - id: "F-1"
+        name: "Comment Compose Keystroke Rework"
+        stories:
+          - id: "S-1"
+            title: "Bypass global keys during comment compose mode"
+            timebox: "≤1d"
+            risk: "P0"
+            action_plan:
+              - verb: "Modify"
+                target: "handle_key() in input.rs — add early-return for compose mode before global keys, after filter_active check"
+              - verb: "Test"
+                target: "Typing q, ?, /, and all printable chars in compose mode inserts them; Esc cancels; Ctrl+C still quits"
+            acceptance_criteria:
+              - given: "comment sidebar open AND user in compose mode"
+                when: "they type q"
+                then: "q appended to comment text, app does NOT quit"
+              - given: "comment sidebar open AND user in compose mode"
+                when: "they type ?"
+                then: "? appended to comment text, help overlay does NOT appear"
+              - given: "comment sidebar open AND user in compose mode"
+                when: "they press Ctrl+C"
+                then: "app quits (universal escape hatch preserved)"
+            agent_hints:
+              recommended_class: "builder"
+              context_files:
+                - "crates/clickup-tui/src/input.rs"
+              validation_gates:
+                p0: "cargo build --workspace succeeds; q and ? work in compose"
+                p1: "cargo test --workspace passes"
+                p2: "cargo clippy -p clickup-tui -- -D warnings passes"
+
+          - id: "S-2"
+            title: "Remap Enter to submit, Alt+Enter to newline"
+            timebox: "≤1d"
+            risk: "P0"
+            depends_on: ["S-1"]
+            action_plan:
+              - verb: "Modify"
+                target: "handle_comment_compose() — replace Ctrl+D submit with Enter (no ALT), replace Enter newline with Alt+Enter"
+              - verb: "Test"
+                target: "Enter submits; Alt+Enter inserts newline; mention picker Enter still confirms; empty text Enter is no-op"
+            acceptance_criteria:
+              - given: "user composing comment with non-empty text"
+                when: "they press Enter"
+                then: "comment submitted"
+              - given: "user composing comment"
+                when: "they press Alt+Enter"
+                then: "newline inserted"
+              - given: "user composing with empty text"
+                when: "they press Enter"
+                then: "nothing submitted"
+              - given: "mention picker is open"
+                when: "user presses Enter"
+                then: "selected mention confirmed, NOT submit"
+            agent_hints:
+              recommended_class: "builder"
+              context_files:
+                - "crates/clickup-tui/src/input.rs"
+              validation_gates:
+                p0: "Enter submits, Alt+Enter newline, mention picker unaffected"
+                p1: "cargo test --workspace passes"
+                p2: "cargo clippy -p clickup-tui -- -D warnings passes"
+
+          - id: "S-3"
+            title: "Update UI text and help overlay"
+            timebox: "≤1d"
+            risk: "P1"
+            depends_on: ["S-2"]
+            action_plan:
+              - verb: "Modify"
+                target: "comment_sidebar.rs — change '(Ctrl+D to send)' to '(Enter to send, Alt+Enter for newline)'"
+              - verb: "Modify"
+                target: "ui/mod.rs key_hints() — add compose-mode hints (Enter=Send, Alt+Enter=Newline, Esc=Cancel)"
+              - verb: "Modify"
+                target: "ui/help.rs — add Comments section to TaskDetail help overlay"
+            acceptance_criteria:
+              - given: "user in compose mode"
+                when: "compose area renders"
+                then: "prompt shows '(Enter to send, Alt+Enter for newline)'"
+              - given: "user in compose mode"
+                when: "bottom bar renders"
+                then: "compose-specific hints shown"
+              - given: "user presses ? on TaskDetail (not composing)"
+                when: "help overlay renders"
+                then: "includes Comments section with accurate keybindings"
+            agent_hints:
+              recommended_class: "builder"
+              context_files:
+                - "crates/clickup-tui/src/ui/comment_sidebar.rs"
+                - "crates/clickup-tui/src/ui/mod.rs"
+                - "crates/clickup-tui/src/ui/help.rs"
+              validation_gates:
+                p0: "cargo build --workspace succeeds"
+                p1: "cargo test --workspace passes; no references to Ctrl+D remain"
+                p2: "cargo clippy -p clickup-tui -- -D warnings passes"
+
+execution_plan:
+  phases:
+    - name: "Fix input routing"
+      stories: ["S-1"]
+      agent_class: "builder"
+    - name: "Remap keystrokes"
+      stories: ["S-2"]
+      agent_class: "builder"
+    - name: "Update UI"
+      stories: ["S-3"]
+      agent_class: "builder"

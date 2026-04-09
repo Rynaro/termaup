@@ -31,6 +31,16 @@ pub fn handle_key(
         return;
     }
 
+    // When composing/editing/replying to a comment, route directly to the task detail
+    // handler so that global shortcuts (q, ?, /, etc.) don't swallow typed characters.
+    // Ctrl+C is the universal quit and is handled above this block.
+    if app.screen == Screen::TaskDetail
+        && app.comment_input_mode != crate::app::CommentInputMode::Browse
+    {
+        handle_task_detail(app, key, client, tx);
+        return;
+    }
+
     // Global keys.
     match key.code {
         KeyCode::Char('q') => {
@@ -801,7 +811,7 @@ fn handle_comment_compose(
                 return;
             }
             _ => {
-                // Any other key (e.g. Ctrl+D) — dismiss picker and fall through.
+                // Any other key — dismiss picker and fall through to compose handler.
                 app.dismiss_mention_picker();
             }
         }
@@ -817,7 +827,7 @@ fn handle_comment_compose(
             app.editing_comment_id = None;
             app.editing_parent_id = None;
         }
-        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+        KeyCode::Enter if !key.modifiers.contains(KeyModifiers::ALT) => {
             // Submit the comment, reply, or edit.
             let text = app.comment_input_text.trim().to_string();
             if !text.is_empty() {
@@ -894,7 +904,8 @@ fn handle_comment_compose(
             app.editing_comment_id = None;
             app.editing_parent_id = None;
         }
-        KeyCode::Enter => {
+        KeyCode::Enter if key.modifiers.contains(KeyModifiers::ALT) => {
+            // Alt+Enter inserts a newline without submitting.
             app.comment_input_text.push('\n');
         }
         KeyCode::Backspace => {

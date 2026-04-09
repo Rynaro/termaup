@@ -405,7 +405,7 @@ fn render_input_area(app: &App, frame: &mut Frame, area: Rect) {
     frame.render_widget(block, area);
 
     let mut input_lines = vec![Line::from(Span::styled(
-        format!(" {prompt} (Ctrl+D to send)"),
+        format!(" {prompt} (Enter to send, Alt+Enter for newline)"),
         Style::default()
             .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD),

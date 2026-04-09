@@ -1,0 +1,48 @@
+{
+  "session_id": "519affce-f6a2-4550-8269-fd31fa96b7fb",
+  "spec_id": "SPEC-2026-04-09-001",
+  "goal": "Rework comment compose keystrokes: Enter=submit, Alt+Enter=newline, fix ? and q swallowed by global handlers",
+  "spectra_version": "4.2.0",
+  "steps": [
+    {
+      "id": 1,
+      "story_id": "S-1",
+      "title": "Bypass global keys during comment compose mode",
+      "status": "pending",
+      "dependencies": [],
+      "files_affected": ["crates/clickup-tui/src/input.rs"],
+      "verification_command": "cargo build --workspace && cargo test --workspace",
+      "estimated_timebox": "≤1d",
+      "replanning_notes": null
+    },
+    {
+      "id": 2,
+      "story_id": "S-2",
+      "title": "Remap Enter to submit, Alt+Enter to newline",
+      "status": "pending",
+      "dependencies": [1],
+      "files_affected": ["crates/clickup-tui/src/input.rs"],
+      "verification_command": "cargo build --workspace && cargo test --workspace",
+      "estimated_timebox": "≤1d",
+      "replanning_notes": null
+    },
+    {
+      "id": 3,
+      "story_id": "S-3",
+      "title": "Update UI text and help overlay",
+      "status": "pending",
+      "dependencies": [2],
+      "files_affected": [
+        "crates/clickup-tui/src/ui/comment_sidebar.rs",
+        "crates/clickup-tui/src/ui/mod.rs",
+        "crates/clickup-tui/src/ui/help.rs"
+      ],
+      "verification_command": "cargo build --workspace && cargo test --workspace",
+      "estimated_timebox": "≤1d",
+      "replanning_notes": null
+    }
+  ],
+  "current_step": 0,
+  "completed_steps": [],
+  "replanning_history": []
+}

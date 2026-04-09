@@ -11,7 +11,7 @@ use crate::theme::THEME;
 pub fn render(app: &App, frame: &mut Frame) {
     let area = frame.area();
     let width = 54u16.min(area.width.saturating_sub(4));
-    let height = 20u16.min(area.height.saturating_sub(4));
+    let height = 30u16.min(area.height.saturating_sub(4));
     let x = (area.width.saturating_sub(width)) / 2;
     let y = (area.height.saturating_sub(height)) / 2;
     let popup = Rect::new(x, y, width, height);
@@ -76,7 +76,21 @@ pub fn render(app: &App, frame: &mut Frame) {
         Screen::TaskDetail => {
             lines.push(section_header(" Task Detail"));
             lines.push(key_line("↑/k  ↓/j", "Scroll"));
+            lines.push(key_line("c", "Toggle comments"));
             lines.push(key_line("Esc", "Back to tasks"));
+            lines.push(Line::from(""));
+            lines.push(section_header(" Comment Sidebar"));
+            lines.push(key_line("↑/k  ↓/j", "Navigate comments"));
+            lines.push(key_line("n", "New comment"));
+            lines.push(key_line("r", "Reply"));
+            lines.push(key_line("e", "Edit comment"));
+            lines.push(key_line("d", "Delete comment"));
+            lines.push(key_line("c", "Close sidebar"));
+            lines.push(Line::from(""));
+            lines.push(section_header(" Composing"));
+            lines.push(key_line("Enter", "Send comment"));
+            lines.push(key_line("Alt+Enter", "Insert newline"));
+            lines.push(key_line("Esc", "Cancel"));
         }
     }
 

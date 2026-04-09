@@ -17,7 +17,7 @@ use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
 
-use crate::app::{App, Screen, ViewMode};
+use crate::app::{App, CommentInputMode, Screen, ViewMode};
 use crate::theme::THEME;
 
 /// Minimum terminal columns for usable display.
@@ -315,6 +315,10 @@ fn key_hints(app: &App) -> Vec<(&'static str, &'static str)> {
             if app.delete_confirm_target.is_some() {
                 hints.push(("y", "Confirm delete"));
                 hints.push(("n", "Cancel"));
+            } else if app.comment_input_mode != CommentInputMode::Browse {
+                hints.push(("Enter", "Send"));
+                hints.push(("Alt+Enter", "Newline"));
+                hints.push(("Esc", "Cancel"));
             } else if app.comment_sidebar_open {
                 hints.push(("↑/k", "Nav comments"));
                 hints.push(("↓/j", "Nav comments"));
@@ -332,7 +336,10 @@ fn key_hints(app: &App) -> Vec<(&'static str, &'static str)> {
         }
     }
 
-    hints.push(("?", "Help"));
-    hints.push(("q", "Quit"));
+    // Suppress global shortcuts during compose — those keys feed into the text box.
+    if app.comment_input_mode == CommentInputMode::Browse {
+        hints.push(("?", "Help"));
+        hints.push(("q", "Quit"));
+    }
     hints
 }
