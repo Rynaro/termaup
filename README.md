@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🚀 termaup
+<img src="assets/termaup.png" alt="termaup logo" width="280" />
+
+# termaup
 
 **ClickUp in your terminal — a fast CLI and TUI client built in Rust.**
 
