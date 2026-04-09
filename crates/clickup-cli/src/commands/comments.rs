@@ -1,7 +1,11 @@
 use anyhow::{Context, Result};
 use clap::Subcommand;
+use owo_colors::OwoColorize;
 
-use clickup_api::models::{CreateCommentRequest, UpdateCommentRequest};
+use clickup_api::models::{
+    comment::{resolve_mentions, CommentContentItem, MentionResolution},
+    CreateCommentRequest, UpdateCommentRequest,
+};
 
 use crate::client_factory::create_client;
 use crate::output;
@@ -107,7 +111,7 @@ async fn list_comments(
             let mut entry = serde_json::json!({
                 "id": comment.id,
                 "author": comment.user.as_ref().map(|u| u.username.as_str()).unwrap_or("Unknown"),
-                "text": comment.comment_text,
+                "text": comment_body_text(&comment.comment, &comment.comment_text),
                 "date": comment.date,
                 "reply_count": comment.reply_count,
             });
@@ -120,7 +124,7 @@ async fn list_comments(
                                 serde_json::json!({
                                     "id": r.id,
                                     "author": r.user.as_ref().map(|u| u.username.as_str()).unwrap_or("Unknown"),
-                                    "text": r.comment_text,
+                                    "text": comment_body_text(&r.comment, &r.comment_text),
                                     "date": r.date,
                                 })
                             })
@@ -152,7 +156,7 @@ async fn list_comments(
         rows.push(vec![
             comment.id.clone(),
             comment.user.as_ref().map(|u| u.username.clone()).unwrap_or_else(|| "Unknown".to_string()),
-            truncate_text(&comment.comment_text, 50),
+            truncate_text(&comment_body_text(&comment.comment, &comment.comment_text), 50),
             date,
         ]);
 
@@ -165,7 +169,7 @@ async fn list_comments(
                         rows.push(vec![
                             format!("{connector} {}", reply.id),
                             reply.user.as_ref().map(|u| u.username.clone()).unwrap_or_else(|| "Unknown".to_string()),
-                            truncate_text(&reply.comment_text, 50),
+                            truncate_text(&comment_body_text(&reply.comment, &reply.comment_text), 50),
                             output::format_date(Some(&reply.date)),
                         ]);
                     }
@@ -191,9 +195,14 @@ async fn create_comment(
 ) -> Result<()> {
     let (client, _config) = create_client(workspace_override)?;
 
+    let (comment_content, resolved, unresolved) =
+        resolve_mentions_for_message(&client, message).await?;
+    print_mention_summary(&resolved, &unresolved);
+
     let request = CreateCommentRequest {
         comment_text: message.to_string(),
         notify_all: if notify_all { Some(true) } else { None },
+        comment: comment_content,
     };
 
     let comment = client
@@ -214,9 +223,14 @@ async fn reply_comment(
 ) -> Result<()> {
     let (client, _config) = create_client(workspace_override)?;
 
+    let (comment_content, resolved, unresolved) =
+        resolve_mentions_for_message(&client, message).await?;
+    print_mention_summary(&resolved, &unresolved);
+
     let request = CreateCommentRequest {
         comment_text: message.to_string(),
         notify_all: if notify_all { Some(true) } else { None },
+        comment: comment_content,
     };
 
     let reply = client
@@ -281,11 +295,83 @@ async fn delete_comment(
     Ok(())
 }
 
-/// Truncates text to a maximum character length, adding an ellipsis if needed.
+/// Resolves `@username` tokens in `message` against workspace members.
 ///
-/// Uses only the first line if the text is multi-line. Safe for multi-byte
-/// UTF-8 characters.
-fn truncate_text(text: &str, max_len: usize) -> String {
+/// Only fetches workspaces when the message contains `@`. Returns the
+/// structured comment content (empty vec if no mentions) along with
+/// a [`MentionResolution`] for reporting purposes.
+async fn resolve_mentions_for_message(
+    client: &clickup_api::client::ClickUpClient,
+    message: &str,
+) -> Result<(Vec<CommentContentItem>, Vec<String>, Vec<String>)> {
+    if !message.contains('@') {
+        return Ok((vec![], vec![], vec![]));
+    }
+
+    let workspaces = client
+        .get_workspaces()
+        .await
+        .context("failed to fetch workspace members for mention resolution")?;
+
+    // Collect all unique members across workspaces.
+    let mut all_members: Vec<clickup_api::models::workspace::WorkspaceMember> = Vec::new();
+    for ws in &workspaces {
+        for member in &ws.members {
+            if !all_members.iter().any(|m| m.user.id == member.user.id) {
+                all_members.push(member.clone());
+            }
+        }
+    }
+
+    let resolution: MentionResolution = resolve_mentions(message, &all_members);
+    Ok((
+        resolution.comment_content,
+        resolution.resolved,
+        resolution.unresolved,
+    ))
+}
+
+/// Prints a summary of resolved and unresolved @mention usernames.
+fn print_mention_summary(resolved: &[String], unresolved: &[String]) {
+    if !resolved.is_empty() {
+        let names: Vec<String> = resolved.iter().map(|u| format!("@{u}")).collect();
+        output::info(&format!("Mentioned: {}", names.join(", ")));
+    }
+    for u in unresolved {
+        eprintln!(
+            "{} Could not resolve @{u} — sent as plain text",
+            "⚠".yellow()
+        );
+    }
+}
+
+/// Extracts plain-text from a structured comment array, rendering `Tag` items
+/// as `@username`.
+fn comment_body_text(items: &[CommentContentItem], fallback: &str) -> String {
+    if items.is_empty() {
+        return fallback.to_string();
+    }
+    let mut out = String::new();
+    for item in items {
+        match item {
+            CommentContentItem::Tag { user, text, .. } => {
+                if let Some(t) = text {
+                    out.push_str(t);
+                } else if let Some(ref uname) = user.username {
+                    out.push('@');
+                    out.push_str(uname);
+                }
+            }
+            CommentContentItem::Text { text, .. } => out.push_str(text),
+            CommentContentItem::Unknown(_) => {}
+        }
+    }
+    if out.is_empty() {
+        fallback.to_string()
+    } else {
+        out
+    }
+}
     let first_line = text.lines().next().unwrap_or(text);
     if first_line.chars().count() > max_len {
         let truncated: String = first_line.chars().take(max_len).collect();

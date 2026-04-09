@@ -156,6 +156,7 @@ pub fn spawn_create_comment(
     tx: &mpsc::UnboundedSender<AppEvent>,
     task_id: &str,
     comment_text: &str,
+    comment_content: Vec<clickup_api::models::CommentContentItem>,
 ) {
     let client = client.clone();
     let tx = tx.clone();
@@ -165,6 +166,7 @@ pub fn spawn_create_comment(
         tracing::debug!(%task_id, "creating comment");
         let request = clickup_api::models::CreateCommentRequest {
             comment_text: comment_text.clone(),
+            comment: comment_content,
             notify_all: Some(true),
         };
         match client.create_task_comment(&task_id, &request).await {
@@ -219,6 +221,7 @@ pub fn spawn_create_comment_reply(
     tx: &mpsc::UnboundedSender<AppEvent>,
     comment_id: &str,
     comment_text: &str,
+    comment_content: Vec<clickup_api::models::CommentContentItem>,
 ) {
     let client = client.clone();
     let tx = tx.clone();
@@ -228,6 +231,7 @@ pub fn spawn_create_comment_reply(
         tracing::debug!(%comment_id, "creating comment reply");
         let request = clickup_api::models::CreateCommentRequest {
             comment_text: comment_text.clone(),
+            comment: comment_content,
             notify_all: Some(true),
         };
         match client.create_comment_reply(&comment_id, &request).await {
@@ -275,6 +279,7 @@ pub fn spawn_update_comment(
             }
             let request = clickup_api::models::CreateCommentRequest {
                 comment_text: new_text.clone(),
+                comment: vec![],
                 notify_all: None,
             };
             match client.create_comment_reply(&parent_id, &request).await {

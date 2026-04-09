@@ -1,0 +1,294 @@
+metadata:
+  spec_id: "SPEC-2025-07-25-MENTIONS"
+  confidence: 92
+  complexity: 8
+  spectra_version: "4.2.0"
+  created: "2025-07-25"
+
+projects:
+  - id: "P-1"
+    name: "Comment Mentions"
+    features:
+      - id: "F-1"
+        name: "@Mention Users in Comments"
+        stories:
+          - id: "S-1"
+            title: "Structured Comment Content Models"
+            description: >
+              As a library consumer (TUI/CLI), I want serde models for the
+              ClickUp structured comment format with a shared mention-resolution
+              utility, so that comments with @mentions can be correctly
+              serialized, deserialized, and built from plain text.
+            timebox: "≤3d"
+            risk: "P0"
+            dependencies: []
+            action_plan:
+              - verb: "Create"
+                target: "TaggedUser struct in models/comment.rs"
+                file: "crates/clickup-api/src/models/comment.rs"
+              - verb: "Create"
+                target: "CommentContentItem enum (#[serde(untagged)]: Tag, Text, Unknown)"
+                file: "crates/clickup-api/src/models/comment.rs"
+              - verb: "Create"
+                target: "MentionResolution struct"
+                file: "crates/clickup-api/src/models/comment.rs"
+              - verb: "Create"
+                target: "resolve_mentions() function"
+                file: "crates/clickup-api/src/models/comment.rs"
+              - verb: "Extend"
+                target: "Comment struct with comment: Vec<CommentContentItem>"
+                file: "crates/clickup-api/src/models/comment.rs"
+              - verb: "Extend"
+                target: "CreateCommentRequest with comment: Vec<CommentContentItem>"
+                file: "crates/clickup-api/src/models/comment.rs"
+              - verb: "Extend"
+                target: "Structured comment format documentation"
+                file: "docs/clickup-api-quirks.md"
+              - verb: "Test"
+                target: "Serde round-trip + resolve_mentions with boundary conditions"
+                file: "crates/clickup-api/src/models/comment.rs"
+            acceptance_criteria:
+              - given: "JSON with structured comment array containing Tag and Text items"
+                when: "deserialized into Comment"
+                then: "comment field contains correct CommentContentItem variants"
+              - given: "JSON response with no comment field"
+                when: "deserialized into Comment"
+                then: "comment defaults to empty vec"
+              - given: "CreateCommentRequest with non-empty comment vec"
+                when: "serialized"
+                then: "JSON includes comment key with structured array"
+              - given: "CreateCommentRequest with empty comment vec"
+                when: "serialized"
+                then: "JSON omits comment key entirely"
+              - given: "text with @username matching workspace members"
+                when: "resolve_mentions() called"
+                then: "returns Tag items for resolved and Text for unresolved"
+              - given: "text with email-like @pattern (user@example.com)"
+                when: "resolve_mentions() called"
+                then: "no mention resolved"
+              - given: "unknown JSON item type (e.g., emoticon)"
+                when: "deserialized as CommentContentItem"
+                then: "matches Unknown variant without error"
+            agent_hints:
+              recommended_class: "builder"
+              context_files:
+                - "crates/clickup-api/src/models/comment.rs"
+                - "crates/clickup-api/src/models/workspace.rs"
+                - "crates/clickup-api/src/serde_helpers.rs"
+              validation_gates:
+                p0:
+                  - "cargo build --workspace compiles"
+                  - "No .unwrap() outside test code"
+                  - "clickup-api has no CLI/TUI deps"
+                p1:
+                  - "cargo test --workspace passes"
+                  - "Serde tests cover full, minimal, null-heavy, type-mixed JSON"
+                  - "resolve_mentions tested with boundary conditions"
+                p2:
+                  - "cargo fmt --all -- --check passes"
+                  - "cargo clippy --workspace -- -D warnings passes"
+                  - "All public items have /// doc comments"
+
+          - id: "S-2"
+            title: "TUI Mention Picker"
+            description: >
+              As a TUI user composing a comment, I want a floating member
+              picker triggered by @ that lets me search and select workspace
+              members, so that I can quickly insert @username mentions without
+              remembering exact spellings.
+            timebox: "≤3d"
+            risk: "P1"
+            dependencies: []
+            action_plan:
+              - verb: "Extend"
+                target: "App struct with mention picker state fields"
+                file: "crates/clickup-tui/src/app.rs"
+              - verb: "Create"
+                target: "filtered_members() helper on App"
+                file: "crates/clickup-tui/src/app.rs"
+              - verb: "Modify"
+                target: "@ trigger in comment input handler"
+                file: "crates/clickup-tui/src/input.rs"
+              - verb: "Modify"
+                target: "Input routing when picker active"
+                file: "crates/clickup-tui/src/input.rs"
+              - verb: "Create"
+                target: "Picker selection logic"
+                file: "crates/clickup-tui/src/input.rs"
+              - verb: "Create"
+                target: "render_mention_picker() floating overlay"
+                file: "crates/clickup-tui/src/ui/comment_sidebar.rs"
+              - verb: "Modify"
+                target: "render() to call picker overlay"
+                file: "crates/clickup-tui/src/ui/comment_sidebar.rs"
+              - verb: "Test"
+                target: "filtered_members with various filter strings"
+                file: "crates/clickup-tui/src/app.rs"
+            acceptance_criteria:
+              - given: "user types @ at start of text or after whitespace"
+                when: "in comment input mode"
+                then: "picker opens showing workspace members"
+              - given: "user types @ after non-whitespace (e.g., user@)"
+                when: "in comment input mode"
+                then: "picker does NOT open, @ inserted as regular text"
+              - given: "picker open and user types filter"
+                when: "characters entered"
+                then: "list narrows to matching members"
+              - given: "picker with selection"
+                when: "Enter pressed"
+                then: "@username inserted with trailing space, picker closes"
+              - given: "picker open"
+                when: "Esc pressed"
+                then: "picker closes, typed text remains"
+              - given: "picker open with empty filter"
+                when: "Backspace pressed"
+                then: "picker closes and @ removed from input"
+            agent_hints:
+              recommended_class: "builder"
+              context_files:
+                - "crates/clickup-tui/src/input.rs"
+                - "crates/clickup-tui/src/ui/comment_sidebar.rs"
+                - "crates/clickup-tui/src/app.rs"
+              validation_gates:
+                p0:
+                  - "cargo build --workspace compiles"
+                  - "No .unwrap() outside test code"
+                  - "clickup-tui depends only on clickup-api"
+                p1:
+                  - "cargo test --workspace passes"
+                  - "Picker does not trigger on email patterns"
+                p2:
+                  - "cargo fmt --all -- --check passes"
+                  - "cargo clippy --workspace -- -D warnings passes"
+
+          - id: "S-3"
+            title: "TUI Mention Submit & Display"
+            description: >
+              As a TUI user, I want my @username mentions to be sent as
+              structured tags (triggering ClickUp notifications) and displayed
+              with visual highlighting, so that mentioned users are notified
+              and mentions are visually distinct.
+            timebox: "≤2d"
+            risk: "P0"
+            dependencies: ["S-1"]
+            action_plan:
+              - verb: "Modify"
+                target: "spawn_create_comment to accept structured content"
+                file: "crates/clickup-tui/src/data.rs"
+              - verb: "Modify"
+                target: "spawn_create_comment_reply to accept structured content"
+                file: "crates/clickup-tui/src/data.rs"
+              - verb: "Modify"
+                target: "Submit handler to call resolve_mentions"
+                file: "crates/clickup-tui/src/input.rs"
+              - verb: "Modify"
+                target: "Reply submit handler with same resolution"
+                file: "crates/clickup-tui/src/input.rs"
+              - verb: "Modify"
+                target: "Comment rendering to highlight Tag items as cyan @username"
+                file: "crates/clickup-tui/src/ui/comment_sidebar.rs"
+              - verb: "Modify"
+                target: "Input display to highlight @username tokens"
+                file: "crates/clickup-tui/src/ui/comment_sidebar.rs"
+            acceptance_criteria:
+              - given: "@alice in comment text (alice is member id=123)"
+                when: "submitted"
+                then: "API request contains comment array with tag for alice"
+              - given: "@nonexistent in comment text"
+                when: "submitted"
+                then: "plain comment_text sent, tracing warning emitted"
+              - given: "received comment with structured comment array"
+                when: "rendered in sidebar"
+                then: "@username shown in cyan/bold"
+              - given: "received comment with empty comment array"
+                when: "rendered"
+                then: "comment_text displayed as before"
+            agent_hints:
+              recommended_class: "builder"
+              context_files:
+                - "crates/clickup-tui/src/data.rs"
+                - "crates/clickup-tui/src/input.rs"
+                - "crates/clickup-tui/src/ui/comment_sidebar.rs"
+              validation_gates:
+                p0:
+                  - "cargo build --workspace compiles"
+                  - "No .unwrap() outside test code"
+                  - "Existing comment creation still works"
+                p1:
+                  - "cargo test --workspace passes"
+                p2:
+                  - "cargo fmt --all -- --check passes"
+                  - "cargo clippy --workspace -- -D warnings passes"
+
+          - id: "S-4"
+            title: "CLI @Mention Parsing"
+            description: >
+              As a CLI user creating or replying to a comment, I want @username
+              tokens in my message to be automatically resolved to ClickUp user
+              tags, so that mentioned users receive notifications without me
+              needing to know their numeric IDs.
+            timebox: "≤2d"
+            risk: "P1"
+            dependencies: ["S-1"]
+            action_plan:
+              - verb: "Create"
+                target: "resolve_mentions_for_message() async helper"
+                file: "crates/clickup-cli/src/commands/comments.rs"
+              - verb: "Modify"
+                target: "create_comment() to resolve mentions"
+                file: "crates/clickup-cli/src/commands/comments.rs"
+              - verb: "Modify"
+                target: "reply_comment() to resolve mentions"
+                file: "crates/clickup-cli/src/commands/comments.rs"
+              - verb: "Modify"
+                target: "Comment display to show @username in cyan for Tag items"
+                file: "crates/clickup-cli/src/commands/comments.rs"
+              - verb: "Test"
+                target: "Verify helper compiles and resolution path"
+                file: "crates/clickup-cli/src/commands/comments.rs"
+            acceptance_criteria:
+              - given: "message 'Hey @alice check this' with alice as member"
+                when: "create command executed"
+                then: "API request includes structured tag, CLI prints mentioned users"
+              - given: "@unknown in message"
+                when: "executed"
+                then: "CLI warns about unresolved mention, sends plain text"
+              - given: "message with no @ patterns"
+                when: "executed"
+                then: "no get_workspaces() call, zero overhead"
+              - given: "no default_workspace_id configured"
+                when: "message has mentions"
+                then: "CLI warns, sends as plain text"
+            agent_hints:
+              recommended_class: "builder"
+              context_files:
+                - "crates/clickup-cli/src/commands/comments.rs"
+                - "crates/clickup-cli/src/client_factory.rs"
+                - "crates/clickup-api/src/endpoints/workspaces.rs"
+              validation_gates:
+                p0:
+                  - "cargo build --workspace compiles"
+                  - "No .unwrap() outside test code"
+                  - "Existing commands without mentions still work"
+                p1:
+                  - "cargo test --workspace passes"
+                  - "No get_workspaces() call when no @ patterns"
+                p2:
+                  - "cargo fmt --all -- --check passes"
+                  - "cargo clippy --workspace -- -D warnings passes"
+                  - "All public items have /// doc comments"
+
+execution_plan:
+  phases:
+    - name: "Foundation + Picker"
+      description: "Build API models and TUI picker in parallel"
+      stories: ["S-1", "S-2"]
+      parallel: true
+      agent_class: "builder"
+      gate: "S-1 serde tests pass; S-2 picker renders"
+    - name: "Integration"
+      description: "Wire up mention resolution in TUI and CLI"
+      stories: ["S-3", "S-4"]
+      parallel: true
+      agent_class: "builder"
+      gate: "Structured comments sent to API; CLI mentions resolve"

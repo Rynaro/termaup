@@ -1,0 +1,71 @@
+{
+  "session_id": "spectra-2025-07-25-mentions",
+  "spec_id": "SPEC-2025-07-25-MENTIONS",
+  "goal": "Add @mention support for comments in TUI and CLI with structured comment array",
+  "spectra_version": "4.2.0",
+  "confidence": 92,
+  "complexity": 8,
+  "steps": [
+    {
+      "id": 1,
+      "story_id": "S-1",
+      "title": "Structured Comment Content Models (API)",
+      "status": "pending",
+      "dependencies": [],
+      "files_affected": [
+        "crates/clickup-api/src/models/comment.rs",
+        "crates/clickup-api/src/models/mod.rs",
+        "docs/clickup-api-quirks.md"
+      ],
+      "verification_command": "cargo test -p clickup-api && cargo clippy -p clickup-api -- -D warnings",
+      "estimated_timebox": "≤3d",
+      "replanning_notes": null
+    },
+    {
+      "id": 2,
+      "story_id": "S-2",
+      "title": "TUI Mention Picker",
+      "status": "pending",
+      "dependencies": [],
+      "files_affected": [
+        "crates/clickup-tui/src/app.rs",
+        "crates/clickup-tui/src/input.rs",
+        "crates/clickup-tui/src/ui/comment_sidebar.rs"
+      ],
+      "verification_command": "cargo build -p clickup-tui && cargo test -p clickup-tui && cargo clippy -p clickup-tui -- -D warnings",
+      "estimated_timebox": "≤3d",
+      "replanning_notes": null
+    },
+    {
+      "id": 3,
+      "story_id": "S-3",
+      "title": "TUI Mention Submit & Display",
+      "status": "pending",
+      "dependencies": [1],
+      "files_affected": [
+        "crates/clickup-tui/src/data.rs",
+        "crates/clickup-tui/src/input.rs",
+        "crates/clickup-tui/src/ui/comment_sidebar.rs"
+      ],
+      "verification_command": "cargo build -p clickup-tui && cargo test --workspace && cargo clippy -p clickup-tui -- -D warnings",
+      "estimated_timebox": "≤2d",
+      "replanning_notes": null
+    },
+    {
+      "id": 4,
+      "story_id": "S-4",
+      "title": "CLI @Mention Parsing",
+      "status": "pending",
+      "dependencies": [1],
+      "files_affected": [
+        "crates/clickup-cli/src/commands/comments.rs"
+      ],
+      "verification_command": "cargo build -p clickup-cli && cargo test --workspace && cargo clippy -p clickup-cli -- -D warnings",
+      "estimated_timebox": "≤2d",
+      "replanning_notes": null
+    }
+  ],
+  "current_step": 0,
+  "completed_steps": [],
+  "replanning_history": []
+}

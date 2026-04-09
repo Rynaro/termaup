@@ -149,6 +149,24 @@ mutation support in a future API version, the delete-and-recreate strategy
 (`DELETE /comment/{reply_id}` followed by `POST /comment/{parent_id}/reply`)
 would be the approach for editing.
 
+### 12. Structured Comment Body (`comment` Array)
+
+ClickUp comments have both a `comment_text` (plain-text fallback) and a `comment`
+array of heterogeneous segments for the rich-text body.
+
+**GET response** — Each item is one of:
+- `{"text": "...", "attributes": {...}}` — plain text segment with optional formatting.
+- `{"type": "tag", "user": {"id": 123, "username": "alice", "email": "a@b.com"}, "text": "@alice"}` — @mention tag.
+- `{"text": "😀"}` or other emoticon objects — deserialize as `Text` (they carry a `text` field).
+- Attachment or other unknown items — no `text` or `user` field; captured by `Unknown(Value)` fallback.
+
+**POST/PUT body** — Send the same array; tag items only need `type` and `user.id`. Include
+`comment_text` alongside for clients that don't parse the array.
+
+**Serde note**: The `CommentContentItem` enum uses `#[serde(untagged)]`. `Tag` variant
+must come before `Text` because both can have a `text` field; the `user` field is the
+discriminator. Empty `comment` arrays are skipped during serialization (`skip_serializing_if = "Vec::is_empty"`).
+
 ## Serde Helper Reference
 
 | Helper | Purpose | Use on |

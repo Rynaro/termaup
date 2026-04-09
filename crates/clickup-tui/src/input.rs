@@ -732,6 +732,82 @@ fn handle_comment_compose(
 ) {
     use crate::app::CommentInputMode;
 
+    // --- Mention picker intercept ---
+    // When the picker is active, route most keys to it before falling through
+    // to normal compose handling.
+    if app.mention_picker_active {
+        match key.code {
+            KeyCode::Esc => {
+                app.dismiss_mention_picker();
+                return;
+            }
+            KeyCode::Backspace => {
+                if app.mention_picker_filter.is_empty() {
+                    // Remove the triggering `@` from the input text.
+                    app.comment_input_text.pop();
+                    app.dismiss_mention_picker();
+                } else {
+                    app.mention_picker_filter.pop();
+                    app.mention_picker_selected = 0;
+                }
+                return;
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let count = app.filtered_members().len();
+                if count > 0 {
+                    app.mention_picker_selected =
+                        (app.mention_picker_selected + 1) % count;
+                }
+                return;
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                let count = app.filtered_members().len();
+                if count > 0 {
+                    app.mention_picker_selected =
+                        (app.mention_picker_selected + count - 1) % count;
+                }
+                return;
+            }
+            KeyCode::Enter | KeyCode::Tab => {
+                let members = app.filtered_members();
+                if let Some(member) = members.get(app.mention_picker_selected) {
+                    let username = member.user.username.clone();
+                    // Replace the `@{filter}` fragment in the input text with
+                    // `@username ` (trailing space for ergonomics).
+                    let filter = app.mention_picker_filter.clone();
+                    let at_fragment = format!("@{filter}");
+                    if app.comment_input_text.ends_with(&at_fragment) {
+                        let new_len =
+                            app.comment_input_text.len() - at_fragment.len();
+                        app.comment_input_text.truncate(new_len);
+                    }
+                    app.comment_input_text.push('@');
+                    app.comment_input_text.push_str(&username);
+                    app.comment_input_text.push(' ');
+                    app.dismiss_mention_picker();
+                }
+                return;
+            }
+            KeyCode::Char(c) => {
+                // Typing narrows the filter; non-alphanumeric dismisses picker.
+                if c.is_alphanumeric() || c == '_' || c == '-' {
+                    app.mention_picker_filter.push(c);
+                    app.mention_picker_selected = 0;
+                    app.comment_input_text.push(c);
+                } else {
+                    app.dismiss_mention_picker();
+                    app.comment_input_text.push(c);
+                }
+                return;
+            }
+            _ => {
+                // Any other key (e.g. Ctrl+D) — dismiss picker and fall through.
+                app.dismiss_mention_picker();
+            }
+        }
+    }
+
+    // --- Normal compose handling ---
     match key.code {
         KeyCode::Esc => {
             // Cancel compose, return to browse.
@@ -745,23 +821,46 @@ fn handle_comment_compose(
             // Submit the comment, reply, or edit.
             let text = app.comment_input_text.trim().to_string();
             if !text.is_empty() {
+                // Resolve @mention tokens against workspace members.
+                let members = app
+                    .current_workspace
+                    .as_ref()
+                    .map(|ws| ws.members.as_slice())
+                    .unwrap_or_default();
+                let resolution =
+                    clickup_api::models::resolve_mentions(&text, members);
+                if !resolution.unresolved.is_empty() {
+                    tracing::warn!(
+                        unresolved = ?resolution.unresolved,
+                        "comment contains unresolved @mentions — sending as plain text"
+                    );
+                }
+
                 match &app.comment_input_mode {
                     CommentInputMode::Reply => {
                         if let Some(ref target_id) = app.reply_target_id {
-                            data::spawn_create_comment_reply(client, tx, target_id, &text);
+                            data::spawn_create_comment_reply(
+                                client,
+                                tx,
+                                target_id,
+                                &text,
+                                resolution.comment_content,
+                            );
                         }
                     }
                     CommentInputMode::NewComment => {
                         if let Some(task) = &app.current_task {
-                            data::spawn_create_comment(client, tx, &task.id, &text);
+                            data::spawn_create_comment(
+                                client,
+                                tx,
+                                &task.id,
+                                &text,
+                                resolution.comment_content,
+                            );
                         }
                     }
                     CommentInputMode::EditComment => {
                         if let Some(ref comment_id) = app.editing_comment_id {
-                            // Use the stored editing_parent_id (captured when
-                            // the user pressed 'e') as primary source. Fall
-                            // back to a cache lookup in comment_replies in case
-                            // the stored value was cleared by an async event.
                             let parent_id: Option<String> =
                                 app.editing_parent_id.clone().or_else(|| {
                                     app.comment_replies.iter().find_map(|(pid, replies)| {
@@ -802,6 +901,23 @@ fn handle_comment_compose(
             app.comment_input_text.pop();
         }
         KeyCode::Char(c) => {
+            // Activate the mention picker when `@` is typed at a word boundary.
+            if c == '@' {
+                let at_boundary = app.comment_input_text.is_empty()
+                    || app
+                        .comment_input_text
+                        .chars()
+                        .next_back()
+                        .map(|last| last.is_whitespace())
+                        .unwrap_or(false);
+                if at_boundary {
+                    app.comment_input_text.push('@');
+                    app.mention_picker_active = true;
+                    app.mention_picker_filter.clear();
+                    app.mention_picker_selected = 0;
+                    return;
+                }
+            }
             app.comment_input_text.push(c);
         }
         _ => {}

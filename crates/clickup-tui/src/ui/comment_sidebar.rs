@@ -1,11 +1,151 @@
 use ratatui::Frame;
-use ratatui::layout::Rect;
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Borders, Paragraph, Wrap};
+use ratatui::widgets::{Block, BorderType, Borders, Clear, Paragraph, Wrap};
+
+use clickup_api::models::CommentContentItem;
 
 use crate::app::{App, CommentInputMode};
 use crate::theme::THEME;
+
+/// Builds a list of ratatui [`Span`]s from a comment's structured content
+/// array, styling @mention tags as cyan+bold.
+///
+/// Falls back to rendering `plain_text` if `content` is empty.
+fn comment_body_spans<'a>(
+    content: &'a [CommentContentItem],
+    plain_text: &'a str,
+    base_style: Style,
+) -> Vec<Span<'a>> {
+    if content.is_empty() {
+        return plain_text
+            .split('\n')
+            .flat_map(|l| [Span::styled(l.to_string(), base_style), Span::raw("\n")])
+            .collect();
+    }
+    content
+        .iter()
+        .map(|item| match item {
+            CommentContentItem::Tag { user, text, .. } => {
+                let label = text
+                    .as_deref()
+                    .or_else(|| user.username.as_deref().map(|_| "@"))
+                    .unwrap_or("@mention");
+                Span::styled(
+                    label.to_string(),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                )
+            }
+            CommentContentItem::Text { text, .. } => Span::styled(text.clone(), base_style),
+            CommentContentItem::Unknown(_) => Span::raw(""),
+        })
+        .collect()
+}
+
+/// Renders a set of comment body lines (handles multi-line, newlines from rich
+/// content) with the given indent and base style.
+fn render_comment_body_lines<'a>(
+    content: &'a [CommentContentItem],
+    plain_text: &'a str,
+    indent: &'a str,
+    bg_style: Style,
+) -> Vec<Line<'a>> {
+    let mut out: Vec<Line<'a>> = Vec::new();
+
+    if content.is_empty() {
+        for line_text in plain_text.lines() {
+            let mut line_spans = vec![Span::styled(indent.to_string(), bg_style)];
+            // Highlight @username tokens in input text.
+            line_spans.extend(highlight_at_mentions_in_text(line_text, bg_style));
+            out.push(Line::from(line_spans));
+        }
+        return out;
+    }
+
+    // Collect all spans, then split on newline spans.
+    let mut current_line: Vec<Span<'a>> = vec![Span::styled(indent.to_string(), bg_style)];
+    for item in content {
+        match item {
+            CommentContentItem::Tag { user, text, .. } => {
+                let label = text
+                    .as_deref()
+                    .or_else(|| user.username.as_deref().map(|_| "@"))
+                    .unwrap_or("@mention");
+                current_line.push(Span::styled(
+                    label.to_string(),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ));
+            }
+            CommentContentItem::Text { text, .. } => {
+                // Split on newlines.
+                let parts: Vec<&str> = text.split('\n').collect();
+                for (i, part) in parts.iter().enumerate() {
+                    if i > 0 {
+                        out.push(Line::from(current_line.drain(..).collect::<Vec<_>>()));
+                        current_line = vec![Span::styled(indent.to_string(), bg_style)];
+                    }
+                    if !part.is_empty() {
+                        current_line.push(Span::styled((*part).to_string(), bg_style));
+                    }
+                }
+            }
+            CommentContentItem::Unknown(_) => {}
+        }
+    }
+    if current_line.len() > 1 {
+        // Only emit if there's content beyond the indent.
+        out.push(Line::from(current_line));
+    }
+    out
+}
+
+/// Highlights `@username` tokens in raw text with cyan+bold styling.
+fn highlight_at_mentions_in_text(text: &str, base_style: Style) -> Vec<Span<'_>> {
+    let mut spans: Vec<Span<'_>> = Vec::new();
+    let mut last = 0;
+    let bytes = text.as_bytes();
+    let len = bytes.len();
+    let mut i = 0;
+    while i < len {
+        if bytes[i] == b'@' {
+            let at_boundary = i == 0 || (bytes[i - 1] as char).is_whitespace();
+            if at_boundary {
+                // Collect token.
+                let token_start = i + 1;
+                let mut j = token_start;
+                while j < len
+                    && (bytes[j].is_ascii_alphanumeric() || bytes[j] == b'_' || bytes[j] == b'-')
+                {
+                    j += 1;
+                }
+                if j > token_start {
+                    if i > last {
+                        spans.push(Span::styled(&text[last..i], base_style));
+                    }
+                    spans.push(Span::styled(
+                        &text[i..j],
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
+                    ));
+                    last = j;
+                    i = j;
+                    continue;
+                }
+            }
+        }
+        i += 1;
+    }
+    if last < len {
+        spans.push(Span::styled(&text[last..], base_style));
+    }
+    spans
+}
 
 /// Renders the comment sidebar panel.
 pub fn render(app: &App, frame: &mut Frame, area: Rect) {
@@ -59,7 +199,7 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
     };
 
     // Build the flattened comment lines with selection highlighting.
-    let mut lines: Vec<Line<'static>> = Vec::new();
+    let mut lines: Vec<Line<'_>> = Vec::new();
     let mut flat_index: usize = 0;
 
     if app.comments.is_empty() {
@@ -114,11 +254,13 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
         ]));
 
         // Comment text lines
-        for text_line in comment.comment_text.lines() {
-            lines.push(Line::from(vec![
-                Span::styled("    ", bg_style),
-                Span::styled(text_line.to_string(), bg_style.fg(THEME.fg)),
-            ]));
+        for body_line in render_comment_body_lines(
+            &comment.comment,
+            &comment.comment_text,
+            "    ",
+            bg_style,
+        ) {
+            lines.push(body_line);
         }
 
         // Thread indicator
@@ -187,11 +329,13 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
                     ]));
 
                     let indent = if is_last { "       " } else { "    │  " };
-                    for text_line in reply.comment_text.lines() {
-                        lines.push(Line::from(vec![
-                            Span::styled(indent.to_string(), Style::default().fg(Color::DarkGray)),
-                            Span::styled(text_line.to_string(), r_bg_style.fg(THEME.fg)),
-                        ]));
+                    for body_line in render_comment_body_lines(
+                        &reply.comment,
+                        &reply.comment_text,
+                        indent,
+                        r_bg_style,
+                    ) {
+                        lines.push(body_line);
                     }
 
                     flat_index += 1;
@@ -218,6 +362,10 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
     // Render input area if composing
     if let Some(input_rect) = input_area {
         render_input_area(app, frame, input_rect);
+        // Render the mention picker overlay on top when active.
+        if app.mention_picker_active {
+            render_mention_picker(app, frame, input_rect);
+        }
     }
 }
 
@@ -263,32 +411,26 @@ fn render_input_area(app: &App, frame: &mut Frame, area: Rect) {
             .add_modifier(Modifier::BOLD),
     ))];
 
-    // Render each line of the multi-line input text.
+    // Render each line of the multi-line input text, with @mention highlighting.
     let text = &app.comment_input_text;
+    let base_fg = Style::default().fg(THEME.fg);
     if text.is_empty() {
         // Show cursor on empty input.
         input_lines.push(Line::from(vec![
             Span::raw(" "),
-            Span::styled("█", Style::default().fg(THEME.fg)),
+            Span::styled("█", base_fg),
         ]));
     } else {
         let lines_iter: Vec<&str> = text.split('\n').collect();
         let total = lines_iter.len();
         for (i, line) in lines_iter.into_iter().enumerate() {
             let is_last = i == total - 1;
+            let mut spans = vec![Span::raw(" ")];
+            spans.extend(highlight_at_mentions_in_text(line, base_fg));
             if is_last {
-                // Show cursor at end of last line.
-                input_lines.push(Line::from(vec![
-                    Span::raw(" "),
-                    Span::styled(line.to_string(), Style::default().fg(THEME.fg)),
-                    Span::styled("█", Style::default().fg(THEME.fg)),
-                ]));
-            } else {
-                input_lines.push(Line::from(vec![
-                    Span::raw(" "),
-                    Span::styled(line.to_string(), Style::default().fg(THEME.fg)),
-                ]));
+                spans.push(Span::styled("█", base_fg));
             }
+            input_lines.push(Line::from(spans));
         }
     }
 
@@ -318,6 +460,94 @@ fn render_input_area(app: &App, frame: &mut Frame, area: Rect) {
         .wrap(Wrap { trim: false })
         .scroll((scroll_offset, 0));
     frame.render_widget(input_widget, inner);
+}
+
+/// Renders the floating mention picker overlay above the input area.
+///
+/// Shows up to 5 filtered workspace members. The selected row is highlighted.
+/// An empty member list shows a "No members found" message.
+pub fn render_mention_picker(app: &App, frame: &mut Frame, input_area: Rect) {
+    let members = app.filtered_members();
+    let visible_count = members.len().min(5);
+    // Height: border top + border bottom + rows (at least 1 for "no members")
+    let picker_height = (visible_count.max(1) as u16) + 2;
+    let picker_width = input_area.width.min(40).max(20);
+
+    // Position: just above the input area, right-aligned within the sidebar.
+    let y = input_area.y.saturating_sub(picker_height);
+    let x = input_area.x + input_area.width.saturating_sub(picker_width);
+    let picker_area = Rect {
+        x,
+        y,
+        width: picker_width,
+        height: picker_height,
+    };
+
+    // Clear the area so the picker renders cleanly over whatever is behind it.
+    frame.render_widget(Clear, picker_area);
+
+    let filter = &app.mention_picker_filter;
+    let title = if filter.is_empty() {
+        " @mention ".to_string()
+    } else {
+        format!(" @{filter} ")
+    };
+
+    let block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::Cyan));
+
+    let inner = block.inner(picker_area);
+    frame.render_widget(block, picker_area);
+
+    if members.is_empty() {
+        let msg = Paragraph::new(Span::styled(
+            " No members found",
+            Style::default().fg(Color::DarkGray),
+        ));
+        frame.render_widget(msg, inner);
+        return;
+    }
+
+    // Compute scroll so selected row is always visible (up to 5 rows).
+    let max_visible: usize = inner.height as usize;
+    let selected = app.mention_picker_selected;
+    let scroll_start = if selected >= max_visible {
+        selected - max_visible + 1
+    } else {
+        0
+    };
+
+    let layout_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            (0..max_visible.min(members.len()))
+                .map(|_| Constraint::Length(1))
+                .collect::<Vec<_>>(),
+        )
+        .split(inner);
+
+    for (row_idx, chunk) in layout_chunks.iter().enumerate() {
+        let member_idx = scroll_start + row_idx;
+        if let Some(member) = members.get(member_idx) {
+            let is_selected = member_idx == selected;
+            let style = if is_selected {
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(THEME.fg)
+            };
+            let label = format!(
+                " {} ",
+                member.user.username
+            );
+            frame.render_widget(Paragraph::new(Span::styled(label, style)), *chunk);
+        }
+    }
 }
 
 /// Formats a millisecond timestamp as a relative or short date string.

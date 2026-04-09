@@ -132,6 +132,7 @@ mod tests {
 
         let request = crate::models::CreateCommentRequest {
             comment_text: "Great work!".to_string(),
+            comment: vec![],
             notify_all: Some(true),
         };
         let comment = client.create_task_comment("abc", &request).await.unwrap();
@@ -212,6 +213,7 @@ mod tests {
 
         let request = crate::models::CreateCommentRequest {
             comment_text: "Replying here".to_string(),
+            comment: vec![],
             notify_all: None,
         };
         let reply = client.create_comment_reply("c1", &request).await.unwrap();

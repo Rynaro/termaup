@@ -243,6 +243,14 @@ pub struct App {
     /// Parent comment ID of the delete target (if it's a reply).
     pub delete_confirm_parent: Option<String>,
 
+    // --- Mention picker ---
+    /// Whether the mention picker overlay is active.
+    pub mention_picker_active: bool,
+    /// Current filter text typed after `@`.
+    pub mention_picker_filter: String,
+    /// Currently highlighted row in the picker list.
+    pub mention_picker_selected: usize,
+
     // --- UI state ---
     /// Error message to display (auto-dismisses).
     pub error_message: Option<String>,
@@ -319,6 +327,9 @@ impl App {
             editing_parent_id: None,
             delete_confirm_target: None,
             delete_confirm_parent: None,
+            mention_picker_active: false,
+            mention_picker_filter: String::new(),
+            mention_picker_selected: 0,
             error_message: None,
             error_set_at: None,
             loading: false,
@@ -640,6 +651,36 @@ impl App {
         self.editing_parent_id = None;
         self.delete_confirm_target = None;
         self.delete_confirm_parent = None;
+        self.mention_picker_active = false;
+        self.mention_picker_filter.clear();
+        self.mention_picker_selected = 0;
+    }
+
+    /// Returns workspace members whose username contains `filter` (case-insensitive).
+    ///
+    /// Returns an empty slice when no workspace is loaded.
+    pub fn filtered_members(&self) -> Vec<&clickup_api::models::WorkspaceMember> {
+        let filter = self.mention_picker_filter.to_lowercase();
+        let members = self
+            .current_workspace
+            .as_ref()
+            .map(|ws| ws.members.as_slice())
+            .unwrap_or_default();
+        if filter.is_empty() {
+            members.iter().collect()
+        } else {
+            members
+                .iter()
+                .filter(|m| m.user.username.to_lowercase().contains(&filter))
+                .collect()
+        }
+    }
+
+    /// Dismisses the mention picker without inserting anything.
+    pub fn dismiss_mention_picker(&mut self) {
+        self.mention_picker_active = false;
+        self.mention_picker_filter.clear();
+        self.mention_picker_selected = 0;
     }
 
     /// Toggles the comment sidebar visibility.
@@ -653,6 +694,7 @@ impl App {
             self.editing_parent_id = None;
             self.delete_confirm_target = None;
             self.delete_confirm_parent = None;
+            self.dismiss_mention_picker();
         }
     }
 
@@ -975,5 +1017,58 @@ mod tests {
             let back: ViewMode = config.into();
             assert_eq!(mode, back);
         }
+    }
+
+    #[test]
+    fn test_filtered_members_no_workspace_returns_empty() {
+        let app = App::new();
+        assert!(app.filtered_members().is_empty());
+    }
+
+    #[test]
+    fn test_filtered_members_empty_filter_returns_all() {
+        use clickup_api::models::{Workspace, WorkspaceMember, User};
+
+        let mut app = App::new();
+        app.current_workspace = Some(Workspace {
+            id: "w1".to_string(),
+            name: "Test WS".to_string(),
+            color: None,
+            avatar: None,
+            members: vec![
+                WorkspaceMember {
+                    user: User { id: 1, username: "alice".to_string(), email: "a@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                },
+                WorkspaceMember {
+                    user: User { id: 2, username: "bob".to_string(), email: "b@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                },
+            ],
+        });
+        assert_eq!(app.filtered_members().len(), 2);
+    }
+
+    #[test]
+    fn test_filtered_members_case_insensitive_filter() {
+        use clickup_api::models::{Workspace, WorkspaceMember, User};
+
+        let mut app = App::new();
+        app.current_workspace = Some(Workspace {
+            id: "w1".to_string(),
+            name: "Test WS".to_string(),
+            color: None,
+            avatar: None,
+            members: vec![
+                WorkspaceMember {
+                    user: User { id: 1, username: "Alice".to_string(), email: "a@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                },
+                WorkspaceMember {
+                    user: User { id: 2, username: "bob".to_string(), email: "b@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                },
+            ],
+        });
+        app.mention_picker_filter = "ali".to_string();
+        let members = app.filtered_members();
+        assert_eq!(members.len(), 1);
+        assert_eq!(members[0].user.username, "Alice");
     }
 }
