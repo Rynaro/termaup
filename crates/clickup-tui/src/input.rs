@@ -609,6 +609,16 @@ fn handle_task_detail(
             KeyCode::Char('e') => {
                 // Edit the selected comment (ownership check).
                 if let Some(item) = visible.get(app.selected_comment_index) {
+                    // ClickUp API does not support PUT or DELETE on reply IDs
+                    // (returns 401), so editing replies is not possible.
+                    if matches!(item, CommentItem::Reply { .. }) {
+                        app.error_message = Some(
+                            "Editing reply comments is not supported by the ClickUp API"
+                                .to_string(),
+                        );
+                        app.error_set_at = Some(std::time::Instant::now());
+                        return;
+                    }
                     let info = app
                         .resolve_comment_item(item)
                         .map(|c| (c.id.clone(), c.comment_text.clone(), app.is_own_comment(c)));
@@ -630,6 +640,16 @@ fn handle_task_detail(
             KeyCode::Char('d') => {
                 // Delete the selected comment (ownership check).
                 if let Some(item) = visible.get(app.selected_comment_index) {
+                    // ClickUp API does not support DELETE on reply IDs
+                    // (returns 401), so deleting replies is not possible.
+                    if matches!(item, CommentItem::Reply { .. }) {
+                        app.error_message = Some(
+                            "Deleting reply comments is not supported by the ClickUp API"
+                                .to_string(),
+                        );
+                        app.error_set_at = Some(std::time::Instant::now());
+                        return;
+                    }
                     let info = app
                         .resolve_comment_item(item)
                         .map(|c| (c.id.clone(), app.is_own_comment(c)));
@@ -738,16 +758,18 @@ fn handle_comment_compose(
                     }
                     CommentInputMode::EditComment => {
                         if let Some(ref comment_id) = app.editing_comment_id {
-                            // Derive parent from the reply cache at submission time.
-                            // This is more robust than relying on the stored
-                            // `editing_parent_id` which can be cleared by async
-                            // events arriving between `e` and `Ctrl+D`.
+                            // Use the stored editing_parent_id (captured when
+                            // the user pressed 'e') as primary source. Fall
+                            // back to a cache lookup in comment_replies in case
+                            // the stored value was cleared by an async event.
                             let parent_id: Option<String> =
-                                app.comment_replies.iter().find_map(|(pid, replies)| {
-                                    replies
-                                        .iter()
-                                        .any(|r| r.id == *comment_id)
-                                        .then(|| pid.clone())
+                                app.editing_parent_id.clone().or_else(|| {
+                                    app.comment_replies.iter().find_map(|(pid, replies)| {
+                                        replies
+                                            .iter()
+                                            .any(|r| r.id == *comment_id)
+                                            .then(|| pid.clone())
+                                    })
                                 });
                             tracing::debug!(
                                 %comment_id,

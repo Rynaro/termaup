@@ -206,6 +206,18 @@ termaup/
 **Dependency flow:** both `clickup-cli` and `clickup-tui` depend on `clickup-api`.
 The two binaries are independent of each other.
 
+## ⚠️ Known ClickUp API Limitations
+
+The ClickUp API v2 has some quirks that affect what termaup can do:
+
+- **Thread replies cannot be edited or deleted.** The ClickUp API returns
+  `401 "Oauth token not found"` when attempting `PUT` or `DELETE` on threaded
+  reply comment IDs. Only top-level task comments support these operations.
+  This is a ClickUp API limitation, not an authentication issue.
+
+For the full catalog of API quirks and the workarounds termaup uses, see
+[`docs/clickup-api-quirks.md`](docs/clickup-api-quirks.md).
+
 ## 🗺️ Roadmap
 
 A detailed public roadmap is coming soon! In the meantime, here's a glimpse of

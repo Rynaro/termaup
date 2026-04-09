@@ -370,7 +370,13 @@ impl App {
     /// Sets an error message with a timestamp for auto-dismiss.
     pub fn set_error(&mut self, msg: String) {
         // Add helpful hints for common errors.
-        let enhanced = if msg.contains("401") || msg.contains("auth") || msg.contains("Auth") {
+        // Avoid suggesting re-authentication for comment operation errors —
+        // the ClickUp API returns 401 for certain comment operations (e.g.,
+        // PUT/DELETE on reply IDs) which is an API quirk, not an auth issue.
+        let is_comment_op_error = msg.contains("comment") || msg.contains("reply");
+        let enhanced = if !is_comment_op_error
+            && (msg.contains("401") || msg.contains("auth") || msg.contains("Auth"))
+        {
             format!("{msg} — run `clickup auth login` to re-authenticate")
         } else if msg.contains("timed out") || msg.contains("connection") || msg.contains("network")
         {
