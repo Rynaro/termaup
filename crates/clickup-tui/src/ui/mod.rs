@@ -317,7 +317,7 @@ fn key_hints(app: &App) -> Vec<(&'static str, &'static str)> {
                 hints.push(("n", "Cancel"));
             } else if app.comment_input_mode != CommentInputMode::Browse {
                 hints.push(("Enter", "Send"));
-                hints.push(("Alt+Enter", "Newline"));
+                hints.push(("Alt+Enter/^N", "Newline"));
                 hints.push(("Esc", "Cancel"));
             } else if app.comment_sidebar_open {
                 hints.push(("↑/k", "Nav comments"));

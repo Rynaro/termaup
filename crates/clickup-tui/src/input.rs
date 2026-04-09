@@ -908,6 +908,10 @@ fn handle_comment_compose(
             // Alt+Enter inserts a newline without submitting.
             app.comment_input_text.push('\n');
         }
+        KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            // Ctrl+N inserts a newline — macOS-compatible alternative to Alt+Enter.
+            app.comment_input_text.push('\n');
+        }
         KeyCode::Backspace => {
             app.comment_input_text.pop();
         }

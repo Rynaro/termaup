@@ -89,7 +89,7 @@ pub fn render(app: &App, frame: &mut Frame) {
             lines.push(Line::from(""));
             lines.push(section_header(" Composing"));
             lines.push(key_line("Enter", "Send comment"));
-            lines.push(key_line("Alt+Enter", "Insert newline"));
+            lines.push(key_line("Alt+Enter / Ctrl+N", "Insert newline"));
             lines.push(key_line("Esc", "Cancel"));
         }
     }
