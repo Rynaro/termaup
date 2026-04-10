@@ -167,6 +167,73 @@ array of heterogeneous segments for the rich-text body.
 must come before `Text` because both can have a `text` field; the `user` field is the
 discriminator. Empty `comment` arrays are skipped during serialization (`skip_serializing_if = "Vec::is_empty"`).
 
+### 13. Custom Field `value` Is an Option ID, Not a Display Name
+
+For `drop_down` and `labels` custom field types, the `value` returned by the API is
+**not** a human-readable string — it is an internal identifier:
+
+- **`drop_down`**: `value` is a single UUID string (e.g. `"a1b2c3d4-..."`) matching
+  one of the `options[].id` entries in `type_config`.
+- **`labels`**: `value` is an array of UUID strings (e.g. `["id1", "id2"]`), each
+  matching an option ID.
+
+The display name lives in `type_config.options`:
+
+```json
+{
+  "id": "cf_priority",
+  "name": "Priority",
+  "type": "drop_down",
+  "type_config": {
+    "options": [
+      { "id": "opt_a", "name": "High",   "color": "#FF0000", "orderindex": 0 },
+      { "id": "opt_b", "name": "Medium", "color": "#FFFF00", "orderindex": 1 }
+    ]
+  },
+  "value": "opt_a"
+}
+```
+
+For `labels`, the option objects use the key `"label"` (not `"name"`):
+
+```json
+{
+  "type": "labels",
+  "type_config": {
+    "options": [
+      { "id": "lbl_1", "label": "Bug",     "color": "#e74c3c" },
+      { "id": "lbl_2", "label": "Feature", "color": "#27ae60" }
+    ]
+  },
+  "value": ["lbl_1", "lbl_2"]
+}
+```
+
+Some endpoints also return the `orderindex` integer instead of the UUID string for
+`drop_down` — always handle both cases.
+
+**Fix**: Capture `type_config` in the `CustomField` struct. Use `CustomField::display_value()`
+to resolve IDs to names at render time. Gracefully fall back to the raw ID if
+`type_config` is absent or the ID has no match.
+
+#### Custom Field Type Value Formats
+
+| Type | `value` format | `type_config` key |
+|------|---------------|-------------------|
+| `text` / `short_text` / `url` / `email` / `phone` | String | — |
+| `number` | Number (int or float) | `precision` |
+| `currency` | Number | `currency_type`, `precision` |
+| `checkbox` | Boolean (`true`/`false`) | — |
+| `date` | String or integer (Unix ms) | — |
+| `drop_down` | UUID string (or orderindex int) | `options[].id` → `options[].name` |
+| `labels` | Array of UUID strings | `options[].id` → `options[].label` |
+| `emoji` | Integer (0 to `count`) | `code_point` (hex Unicode), `count` |
+| `users` | Array of user objects `{id, username}` | — |
+| `tasks` | Array of task IDs or `{id}` objects | — |
+| `manual_progress` | `{current: N}` | `start`, `end` |
+| `automatic_progress` | Integer percentage or `{percent: N}` | — (read-only) |
+| `location` | `{location: {lat, lng}, formatted_address}` | — |
+
 ## Serde Helper Reference
 
 | Helper | Purpose | Use on |
