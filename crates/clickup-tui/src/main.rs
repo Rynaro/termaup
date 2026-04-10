@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // --- Run the app ---
-    let result = run_app(&mut terminal, client).await;
+    let result = run_app(&mut terminal, client, config).await;
 
     // --- Terminal teardown ---
     restore_terminal()?;
@@ -84,8 +84,10 @@ fn restore_terminal() -> Result<()> {
 async fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     client: ClickUpClient,
+    config: Config,
 ) -> Result<()> {
     let mut app = App::new();
+    app.color_mode = config.color_mode;
     let (mut events, event_tx) = EventHandler::new();
 
     // Kick off initial data load.

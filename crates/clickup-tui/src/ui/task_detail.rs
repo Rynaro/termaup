@@ -4,8 +4,10 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Paragraph, Wrap};
 
+use clickup_api::config::ColorMode;
+
 use crate::app::App;
-use crate::theme::{THEME, hex_to_color};
+use crate::theme::{THEME, contrast_color, hex_to_color, parse_hex};
 use crate::widgets::markdown;
 
 /// Renders the task detail screen.
@@ -94,13 +96,37 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
     }
 
     if !task.tags.is_empty() {
-        let tags: String = task
-            .tags
-            .iter()
-            .map(|t| format!("#{}", t.name))
-            .collect::<Vec<_>>()
-            .join("  ");
-        lines.push(meta_line("Tags", &tags));
+        let key_span = Span::styled(
+            "  Tags: ",
+            Style::default()
+                .fg(THEME.muted)
+                .add_modifier(Modifier::BOLD),
+        );
+        let mut spans = vec![key_span];
+        for (i, tag) in task.tags.iter().enumerate() {
+            if i > 0 {
+                spans.push(Span::raw("  "));
+            }
+            if app.color_mode == ColorMode::Cozy {
+                let bg = tag.tag_bg.as_deref().map(hex_to_color).unwrap_or(THEME.muted);
+                let fg = tag
+                    .tag_bg
+                    .as_deref()
+                    .and_then(parse_hex)
+                    .map(|(r, g, b)| contrast_color(r, g, b))
+                    .unwrap_or(Color::White);
+                spans.push(Span::styled(
+                    format!(" {} ", tag.name),
+                    Style::default().fg(fg).bg(bg),
+                ));
+            } else {
+                spans.push(Span::styled(
+                    format!("#{}", tag.name),
+                    Style::default().fg(THEME.fg),
+                ));
+            }
+        }
+        lines.push(Line::from(spans));
     }
 
     lines.push(meta_line("URL", &task.url));
@@ -164,16 +190,47 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
             lines.push(Line::from(""));
 
             for field in &non_empty {
-                let display = field.display_value();
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        format!("    {}: ", field.name),
-                        Style::default()
-                            .fg(THEME.muted)
-                            .add_modifier(Modifier::BOLD),
-                    ),
-                    Span::styled(display, Style::default().fg(THEME.fg)),
-                ]));
+                let key_style = Style::default().fg(THEME.muted).add_modifier(Modifier::BOLD);
+                let key = format!("    {}: ", field.name);
+
+                let line = if app.color_mode == ColorMode::Cozy {
+                    let options = field.resolved_options();
+                    if options.iter().any(|o| o.color.is_some()) {
+                        let mut spans = vec![Span::styled(key, key_style)];
+                        for (i, opt) in options.iter().enumerate() {
+                            if i > 0 {
+                                spans.push(Span::raw("  "));
+                            }
+                            if let Some(hex) = &opt.color {
+                                let bg = hex_to_color(hex);
+                                let fg = parse_hex(hex)
+                                    .map(|(r, g, b)| contrast_color(r, g, b))
+                                    .unwrap_or(Color::White);
+                                spans.push(Span::styled(
+                                    format!(" {} ", opt.label),
+                                    Style::default().fg(fg).bg(bg),
+                                ));
+                            } else {
+                                spans.push(Span::styled(
+                                    opt.label.clone(),
+                                    Style::default().fg(THEME.fg),
+                                ));
+                            }
+                        }
+                        Line::from(spans)
+                    } else {
+                        Line::from(vec![
+                            Span::styled(key, key_style),
+                            Span::styled(field.display_value(), Style::default().fg(THEME.fg)),
+                        ])
+                    }
+                } else {
+                    Line::from(vec![
+                        Span::styled(key, key_style),
+                        Span::styled(field.display_value(), Style::default().fg(THEME.fg)),
+                    ])
+                };
+                lines.push(line);
             }
         }
     }

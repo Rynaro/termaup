@@ -269,6 +269,18 @@ pub struct CustomField {
     pub value: Option<serde_json::Value>,
 }
 
+/// A resolved display option for a custom field, carrying its label and optional API color.
+///
+/// Used by the TUI to render colored chips for `drop_down` and `labels` fields
+/// when [`ColorMode::Cozy`](clickup_api::config::ColorMode) is active.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CustomFieldOption {
+    /// Display label for this option.
+    pub label: String,
+    /// Hex color string (e.g. `"#ff0000"`) from the ClickUp API, if available.
+    pub color: Option<String>,
+}
+
 impl CustomField {
     /// Returns a human-readable display string for this field's current value.
     ///
@@ -457,6 +469,129 @@ impl CustomField {
                 .as_str()
                 .map(String::from)
                 .unwrap_or_else(|| val.to_string()),
+        }
+    }
+
+    /// Returns the resolved display options for this field's current value, each with an
+    /// optional hex color from the ClickUp API.
+    ///
+    /// - `drop_down` → single `CustomFieldOption` with the selected option's name and color.
+    /// - `labels` → one `CustomFieldOption` per selected label, each with its color.
+    /// - All other types → single `CustomFieldOption` with [`display_value()`](Self::display_value)
+    ///   and no color.
+    ///
+    /// Falls back gracefully when `type_config` is absent or an option ID is not found.
+    pub fn resolved_options(&self) -> Vec<CustomFieldOption> {
+        let tc = self.type_config.as_ref();
+
+        match self.field_type.as_str() {
+            "drop_down" => {
+                let Some(val) = &self.value else {
+                    return Vec::new();
+                };
+
+                let options_arr = tc
+                    .and_then(|t| t.get("options"))
+                    .and_then(|o| o.as_array())
+                    .cloned()
+                    .unwrap_or_default();
+
+                // orderindex fallback (ClickUp occasionally sends an integer index)
+                if let Some(idx) = val.as_u64() {
+                    let opt = options_arr.get(idx as usize);
+                    let label = opt
+                        .and_then(|o| o.get("name"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let color = opt
+                        .and_then(|o| o.get("color"))
+                        .and_then(|v| v.as_str())
+                        .map(String::from);
+                    return vec![CustomFieldOption { label, color }];
+                }
+
+                let selected_id = match val.as_str() {
+                    Some(s) => s,
+                    None => {
+                        return vec![CustomFieldOption {
+                            label: self.display_value(),
+                            color: None,
+                        }]
+                    }
+                };
+
+                for opt in &options_arr {
+                    if opt.get("id").and_then(|v| v.as_str()) == Some(selected_id) {
+                        let label = opt
+                            .get("name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(selected_id)
+                            .to_string();
+                        let color = opt
+                            .get("color")
+                            .and_then(|v| v.as_str())
+                            .map(String::from);
+                        return vec![CustomFieldOption { label, color }];
+                    }
+                }
+
+                vec![CustomFieldOption {
+                    label: selected_id.to_string(),
+                    color: None,
+                }]
+            }
+
+            "labels" => {
+                let Some(val) = &self.value else {
+                    return Vec::new();
+                };
+
+                let ids: Vec<&str> = match val.as_array() {
+                    Some(arr) => arr.iter().filter_map(|v| v.as_str()).collect(),
+                    None => {
+                        return vec![CustomFieldOption {
+                            label: self.display_value(),
+                            color: None,
+                        }]
+                    }
+                };
+
+                let options_arr = tc
+                    .and_then(|t| t.get("options"))
+                    .and_then(|o| o.as_array())
+                    .cloned()
+                    .unwrap_or_default();
+
+                ids.iter()
+                    .map(|id| {
+                        for opt in &options_arr {
+                            if opt.get("id").and_then(|v| v.as_str()) == Some(id) {
+                                let label = opt
+                                    .get("label")
+                                    .or_else(|| opt.get("name"))
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or(id)
+                                    .to_string();
+                                let color = opt
+                                    .get("color")
+                                    .and_then(|v| v.as_str())
+                                    .map(String::from);
+                                return CustomFieldOption { label, color };
+                            }
+                        }
+                        CustomFieldOption {
+                            label: id.to_string(),
+                            color: None,
+                        }
+                    })
+                    .collect()
+            }
+
+            _ => vec![CustomFieldOption {
+                label: self.display_value(),
+                color: None,
+            }],
         }
     }
 }
@@ -1163,5 +1298,133 @@ mod tests {
         assert!(task.list.is_none());
         assert!(task.folder.is_none());
         assert!(task.space.is_none());
+    }
+
+    // ── resolved_options() tests ────────────────────────────────────────────────
+
+    fn make_dropdown_field(value: serde_json::Value, options: serde_json::Value) -> CustomField {
+        CustomField {
+            id: "f1".into(),
+            name: "Priority".into(),
+            field_type: "drop_down".into(),
+            type_config: Some(serde_json::json!({ "options": options })),
+            value: Some(value),
+        }
+    }
+
+    fn make_labels_field(value: serde_json::Value, options: serde_json::Value) -> CustomField {
+        CustomField {
+            id: "f2".into(),
+            name: "Labels".into(),
+            field_type: "labels".into(),
+            type_config: Some(serde_json::json!({ "options": options })),
+            value: Some(value),
+        }
+    }
+
+    #[test]
+    fn test_resolved_options_dropdown_returns_name_and_color() {
+        let field = make_dropdown_field(
+            serde_json::json!("opt_high"),
+            serde_json::json!([
+                { "id": "opt_high", "name": "High", "color": "#ff6600" },
+                { "id": "opt_low", "name": "Low", "color": "#00aaff" }
+            ]),
+        );
+        let opts = field.resolved_options();
+        assert_eq!(opts.len(), 1, "dropdown returns single option");
+        assert_eq!(opts[0].label, "High");
+        assert_eq!(opts[0].color, Some("#ff6600".to_string()));
+    }
+
+    #[test]
+    fn test_resolved_options_dropdown_unknown_id_returns_raw() {
+        let field = make_dropdown_field(
+            serde_json::json!("unknown_id"),
+            serde_json::json!([{ "id": "opt_a", "name": "A", "color": "#aaaaaa" }]),
+        );
+        let opts = field.resolved_options();
+        assert_eq!(opts[0].label, "unknown_id");
+        assert_eq!(opts[0].color, None);
+    }
+
+    #[test]
+    fn test_resolved_options_dropdown_orderindex_fallback() {
+        let field = make_dropdown_field(
+            serde_json::json!(1u64),
+            serde_json::json!([
+                { "id": "opt_a", "name": "A", "color": "#111111" },
+                { "id": "opt_b", "name": "B", "color": "#222222" }
+            ]),
+        );
+        let opts = field.resolved_options();
+        assert_eq!(opts[0].label, "B");
+        assert_eq!(opts[0].color, Some("#222222".to_string()));
+    }
+
+    #[test]
+    fn test_resolved_options_dropdown_no_color_field() {
+        let field = make_dropdown_field(
+            serde_json::json!("opt_x"),
+            serde_json::json!([{ "id": "opt_x", "name": "X" }]),
+        );
+        let opts = field.resolved_options();
+        assert_eq!(opts[0].label, "X");
+        assert_eq!(opts[0].color, None);
+    }
+
+    #[test]
+    fn test_resolved_options_labels_multiple() {
+        let field = make_labels_field(
+            serde_json::json!(["label_bug", "label_feat"]),
+            serde_json::json!([
+                { "id": "label_bug",  "label": "Bug",     "color": "#ff0000" },
+                { "id": "label_feat", "label": "Feature", "color": "#00ff00" }
+            ]),
+        );
+        let opts = field.resolved_options();
+        assert_eq!(opts.len(), 2);
+        assert_eq!(opts[0].label, "Bug");
+        assert_eq!(opts[0].color, Some("#ff0000".to_string()));
+        assert_eq!(opts[1].label, "Feature");
+        assert_eq!(opts[1].color, Some("#00ff00".to_string()));
+    }
+
+    #[test]
+    fn test_resolved_options_labels_unknown_id_returns_raw() {
+        let field = make_labels_field(
+            serde_json::json!(["nope"]),
+            serde_json::json!([{ "id": "label_a", "label": "A", "color": "#aabbcc" }]),
+        );
+        let opts = field.resolved_options();
+        assert_eq!(opts[0].label, "nope");
+        assert_eq!(opts[0].color, None);
+    }
+
+    #[test]
+    fn test_resolved_options_non_colored_type_returns_display_value() {
+        let field = CustomField {
+            id: "f3".into(),
+            name: "Note".into(),
+            field_type: "text".into(),
+            type_config: None,
+            value: Some(serde_json::json!("hello world")),
+        };
+        let opts = field.resolved_options();
+        assert_eq!(opts.len(), 1);
+        assert_eq!(opts[0].label, "hello world");
+        assert_eq!(opts[0].color, None);
+    }
+
+    #[test]
+    fn test_resolved_options_no_value_returns_empty() {
+        let field = CustomField {
+            id: "f4".into(),
+            name: "Empty".into(),
+            field_type: "drop_down".into(),
+            type_config: None,
+            value: None,
+        };
+        assert!(field.resolved_options().is_empty());
     }
 }

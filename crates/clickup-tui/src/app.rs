@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
+use clickup_api::config::ColorMode;
 use clickup_api::models::{Comment, Folder, List, Space, Status, Task, User, Workspace};
 
 use crate::filters::TaskFilters;
@@ -256,6 +257,8 @@ pub struct App {
     pub comment_mention_map: HashMap<String, i64>,
 
     // --- UI state ---
+    /// Color display mode loaded from config (Cozy/Sober).
+    pub color_mode: ColorMode,
     /// Error message to display (auto-dismisses).
     pub error_message: Option<String>,
     /// When the current error message was set.
@@ -338,6 +341,7 @@ impl App {
             error_message: None,
             error_set_at: None,
             loading: false,
+            color_mode: ColorMode::default(),
             scroll_offset: 0,
             show_help: false,
             tick_count: 0,

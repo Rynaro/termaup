@@ -114,6 +114,18 @@ pub fn parse_hex(hex: &str) -> Option<(u8, u8, u8)> {
     Some((r, g, b))
 }
 
+/// Returns `Color::Black` or `Color::White` whichever provides better contrast
+/// against the given RGB background color (WCAG relative luminance formula).
+pub fn contrast_color(r: u8, g: u8, b: u8) -> Color {
+    let luminance =
+        (0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b)) / 255.0;
+    if luminance > 0.5 {
+        Color::Black
+    } else {
+        Color::White
+    }
+}
+
 /// Global theme instance.
 pub static THEME: std::sync::LazyLock<Theme> = std::sync::LazyLock::new(Theme::default_dark);
 
@@ -133,6 +145,18 @@ mod tests {
         assert_eq!(parse_hex("#d3d3d3"), Some((211, 211, 211)));
         assert_eq!(parse_hex("000000"), Some((0, 0, 0)));
         assert_eq!(parse_hex("short"), None);
+    }
+
+    #[test]
+    fn test_contrast_color_dark_bg_returns_white() {
+        assert_eq!(contrast_color(0, 0, 0), Color::White);
+        assert_eq!(contrast_color(50, 50, 80), Color::White);
+    }
+
+    #[test]
+    fn test_contrast_color_light_bg_returns_black() {
+        assert_eq!(contrast_color(255, 255, 255), Color::Black);
+        assert_eq!(contrast_color(255, 200, 80), Color::Black);
     }
 
     #[test]
