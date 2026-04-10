@@ -254,8 +254,8 @@ fn test_deserialize_task_with_priority_false() {
 #[test]
 fn test_custom_field_edge_cases_fixture() {
     let json = load_fixture("task_custom_fields_edge.json");
-    let task: Task = serde_json::from_str(&json)
-        .expect("edge case custom fields task should deserialize");
+    let task: Task =
+        serde_json::from_str(&json).expect("edge case custom fields task should deserialize");
 
     let fields = task.custom_fields.as_ref().unwrap();
     assert_eq!(fields.len(), 8);
@@ -294,7 +294,10 @@ fn test_custom_field_edge_cases_fixture() {
     // 7: future/unknown type — no panic, returns some string
     assert_eq!(fields[6].name, "Future Field Type");
     let result = fields[6].display_value();
-    assert!(!result.is_empty(), "unknown type should return non-empty string");
+    assert!(
+        !result.is_empty(),
+        "unknown type should return non-empty string"
+    );
 
     // 8: extra API fields silently ignored
     assert_eq!(fields[7].name, "Field With Extra API Fields");

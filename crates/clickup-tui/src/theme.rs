@@ -117,8 +117,7 @@ pub fn parse_hex(hex: &str) -> Option<(u8, u8, u8)> {
 /// Returns `Color::Black` or `Color::White` whichever provides better contrast
 /// against the given RGB background color (WCAG relative luminance formula).
 pub fn contrast_color(r: u8, g: u8, b: u8) -> Color {
-    let luminance =
-        (0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b)) / 255.0;
+    let luminance = (0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b)) / 255.0;
     if luminance > 0.5 {
         Color::Black
     } else {

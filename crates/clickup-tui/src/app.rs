@@ -1038,7 +1038,7 @@ mod tests {
 
     #[test]
     fn test_filtered_members_empty_filter_returns_all() {
-        use clickup_api::models::{Workspace, WorkspaceMember, User};
+        use clickup_api::models::{User, Workspace, WorkspaceMember};
 
         let mut app = App::new();
         app.current_workspace = Some(Workspace {
@@ -1048,10 +1048,24 @@ mod tests {
             avatar: None,
             members: vec![
                 WorkspaceMember {
-                    user: User { id: 1, username: "alice".to_string(), email: "a@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                    user: User {
+                        id: 1,
+                        username: "alice".to_string(),
+                        email: "a@e.com".to_string(),
+                        color: None,
+                        profile_picture: None,
+                        initials: None,
+                    },
                 },
                 WorkspaceMember {
-                    user: User { id: 2, username: "bob".to_string(), email: "b@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                    user: User {
+                        id: 2,
+                        username: "bob".to_string(),
+                        email: "b@e.com".to_string(),
+                        color: None,
+                        profile_picture: None,
+                        initials: None,
+                    },
                 },
             ],
         });
@@ -1060,7 +1074,7 @@ mod tests {
 
     #[test]
     fn test_filtered_members_case_insensitive_filter() {
-        use clickup_api::models::{Workspace, WorkspaceMember, User};
+        use clickup_api::models::{User, Workspace, WorkspaceMember};
 
         let mut app = App::new();
         app.current_workspace = Some(Workspace {
@@ -1070,10 +1084,24 @@ mod tests {
             avatar: None,
             members: vec![
                 WorkspaceMember {
-                    user: User { id: 1, username: "Alice".to_string(), email: "a@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                    user: User {
+                        id: 1,
+                        username: "Alice".to_string(),
+                        email: "a@e.com".to_string(),
+                        color: None,
+                        profile_picture: None,
+                        initials: None,
+                    },
                 },
                 WorkspaceMember {
-                    user: User { id: 2, username: "bob".to_string(), email: "b@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                    user: User {
+                        id: 2,
+                        username: "bob".to_string(),
+                        email: "b@e.com".to_string(),
+                        color: None,
+                        profile_picture: None,
+                        initials: None,
+                    },
                 },
             ],
         });

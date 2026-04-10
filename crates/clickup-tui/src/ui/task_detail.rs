@@ -108,7 +108,11 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
                 spans.push(Span::raw("  "));
             }
             if app.color_mode == ColorMode::Cozy {
-                let bg = tag.tag_bg.as_deref().map(hex_to_color).unwrap_or(THEME.muted);
+                let bg = tag
+                    .tag_bg
+                    .as_deref()
+                    .map(hex_to_color)
+                    .unwrap_or(THEME.muted);
                 let fg = tag
                     .tag_bg
                     .as_deref()
@@ -190,7 +194,9 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
             lines.push(Line::from(""));
 
             for field in &non_empty {
-                let key_style = Style::default().fg(THEME.muted).add_modifier(Modifier::BOLD);
+                let key_style = Style::default()
+                    .fg(THEME.muted)
+                    .add_modifier(Modifier::BOLD);
                 let key = format!("    {}: ", field.name);
 
                 let line = if app.color_mode == ColorMode::Cozy {

@@ -351,8 +351,7 @@ impl CustomField {
                 } else {
                     return val.to_string();
                 };
-                resolve_option_name(&self.type_config, &option_id, "name")
-                    .unwrap_or(option_id)
+                resolve_option_name(&self.type_config, &option_id, "name").unwrap_or(option_id)
             }
             "labels" => {
                 let ids: Vec<String> = if let Some(arr) = val.as_array() {
@@ -517,7 +516,7 @@ impl CustomField {
                         return vec![CustomFieldOption {
                             label: self.display_value(),
                             color: None,
-                        }]
+                        }];
                     }
                 };
 
@@ -528,10 +527,7 @@ impl CustomField {
                             .and_then(|v| v.as_str())
                             .unwrap_or(selected_id)
                             .to_string();
-                        let color = opt
-                            .get("color")
-                            .and_then(|v| v.as_str())
-                            .map(String::from);
+                        let color = opt.get("color").and_then(|v| v.as_str()).map(String::from);
                         return vec![CustomFieldOption { label, color }];
                     }
                 }
@@ -553,7 +549,7 @@ impl CustomField {
                         return vec![CustomFieldOption {
                             label: self.display_value(),
                             color: None,
-                        }]
+                        }];
                     }
                 };
 
@@ -573,10 +569,8 @@ impl CustomField {
                                     .and_then(|v| v.as_str())
                                     .unwrap_or(id)
                                     .to_string();
-                                let color = opt
-                                    .get("color")
-                                    .and_then(|v| v.as_str())
-                                    .map(String::from);
+                                let color =
+                                    opt.get("color").and_then(|v| v.as_str()).map(String::from);
                                 return CustomFieldOption { label, color };
                             }
                         }
@@ -757,7 +751,10 @@ mod tests {
         assert_eq!(cf.len(), 2);
         assert_eq!(cf[0].name, "Story Points");
         assert_eq!(cf[0].field_type, "number");
-        assert!(cf[0].type_config.is_some(), "type_config should be captured");
+        assert!(
+            cf[0].type_config.is_some(),
+            "type_config should be captured"
+        );
         assert_eq!(cf[1].name, "Priority Level");
         assert_eq!(cf[1].field_type, "drop_down");
     }
@@ -1019,14 +1016,20 @@ mod tests {
             result.starts_with("Mar"),
             "date should start with Mar, got: {result}"
         );
-        assert!(result.contains("2024"), "date should contain 2024, got: {result}");
+        assert!(
+            result.contains("2024"),
+            "date should contain 2024, got: {result}"
+        );
     }
 
     #[test]
     fn test_display_value_date_from_integer() {
         let f = make_field_no_config("date", serde_json::json!(1710028800000_i64));
         let result = f.display_value();
-        assert!(result.contains("2024"), "date should contain 2024, got: {result}");
+        assert!(
+            result.contains("2024"),
+            "date should contain 2024, got: {result}"
+        );
     }
 
     #[test]
@@ -1216,7 +1219,8 @@ mod tests {
             "type": "number",
             "value": 42
         });
-        let cf: CustomField = serde_json::from_value(json).expect("type_config absent should deserialize");
+        let cf: CustomField =
+            serde_json::from_value(json).expect("type_config absent should deserialize");
         assert!(cf.type_config.is_none());
         assert_eq!(cf.display_value(), "42");
     }
@@ -1230,7 +1234,8 @@ mod tests {
             "type_config": null,
             "value": "opt_x"
         });
-        let cf: CustomField = serde_json::from_value(json).expect("type_config null should deserialize");
+        let cf: CustomField =
+            serde_json::from_value(json).expect("type_config null should deserialize");
         assert!(cf.type_config.is_none());
         // Falls back to raw value
         assert_eq!(cf.display_value(), "opt_x");
@@ -1248,8 +1253,8 @@ mod tests {
             "date_created": "1710000000000",
             "hide_from_guests": false
         });
-        let cf: CustomField = serde_json::from_value(json)
-            .expect("extra API fields should be silently ignored");
+        let cf: CustomField =
+            serde_json::from_value(json).expect("extra API fields should be silently ignored");
         assert_eq!(cf.display_value(), "hello");
     }
     #[test]
