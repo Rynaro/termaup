@@ -221,7 +221,7 @@ fn print_task_detail(task: &clickup_api::models::Task) {
         if !non_empty.is_empty() {
             println!("\n─── Custom Fields ───\n");
             for field in &non_empty {
-                let display = format_custom_field(&field.field_type, field.value.as_ref());
+                let display = field.display_value();
                 println!("  {}: {display}", field.name);
             }
         }
@@ -303,68 +303,5 @@ fn format_duration(ms: u64) -> String {
         format!("{hours}h")
     } else {
         format!("{minutes}m")
-    }
-}
-
-fn format_custom_field(field_type: &str, value: Option<&serde_json::Value>) -> String {
-    let Some(val) = value else {
-        return "—".to_string();
-    };
-    match field_type {
-        "number" | "currency" => {
-            if let Some(n) = val.as_f64() {
-                if n.fract() == 0.0 {
-                    format!("{}", n as i64)
-                } else {
-                    format!("{n:.2}")
-                }
-            } else {
-                val.to_string()
-            }
-        }
-        "checkbox" => {
-            if val.as_bool().unwrap_or(false) {
-                "✅".to_string()
-            } else {
-                "☐".to_string()
-            }
-        }
-        "date" => {
-            if let Some(s) = val.as_str() {
-                output::format_date(Some(s))
-            } else if let Some(n) = val.as_i64() {
-                output::format_date(Some(&n.to_string()))
-            } else {
-                val.to_string()
-            }
-        }
-        "drop_down" | "labels" => {
-            if let Some(arr) = val.as_array() {
-                arr.iter()
-                    .filter_map(|v| v.get("name").or(v.get("label")).and_then(|n| n.as_str()))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            } else if let Some(obj) = val.as_object() {
-                obj.get("name")
-                    .or(obj.get("label"))
-                    .and_then(|n| n.as_str())
-                    .unwrap_or("—")
-                    .to_string()
-            } else if let Some(s) = val.as_str() {
-                s.to_string()
-            } else {
-                val.to_string()
-            }
-        }
-        "url" | "email" | "phone" | "short_text" | "text" => {
-            val.as_str().unwrap_or("—").to_string()
-        }
-        _ => {
-            if let Some(s) = val.as_str() {
-                s.to_string()
-            } else {
-                val.to_string()
-            }
-        }
     }
 }
