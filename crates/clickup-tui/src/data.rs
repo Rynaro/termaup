@@ -165,7 +165,14 @@ pub fn spawn_create_comment(
     tokio::spawn(async move {
         tracing::debug!(%task_id, "creating comment");
         let request = clickup_api::models::CreateCommentRequest {
-            comment_text: comment_text.clone(),
+            // When the comment array is present it carries the full body;
+            // sending comment_text alongside would cause ClickUp to render
+            // the content twice.
+            comment_text: if comment_content.is_empty() {
+                comment_text.clone()
+            } else {
+                String::new()
+            },
             comment: comment_content,
             notify_all: Some(true),
         };
@@ -230,7 +237,11 @@ pub fn spawn_create_comment_reply(
     tokio::spawn(async move {
         tracing::debug!(%comment_id, "creating comment reply");
         let request = clickup_api::models::CreateCommentRequest {
-            comment_text: comment_text.clone(),
+            comment_text: if comment_content.is_empty() {
+                comment_text.clone()
+            } else {
+                String::new()
+            },
             comment: comment_content,
             notify_all: Some(true),
         };

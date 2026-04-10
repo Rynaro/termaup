@@ -193,10 +193,13 @@ pub struct CommentsResponse {
 /// Request body for creating a new comment.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateCommentRequest {
-    /// Plain-text comment body (used when `comment` array is empty).
+    /// Plain-text comment body. Omitted when `comment` array is present — sending
+    /// both causes ClickUp to render the content twice (once from the array, once
+    /// from this field).
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub comment_text: String,
     /// Structured comment content with @mention tags and rich formatting.
-    /// When non-empty, ClickUp uses this array to send mention notifications.
+    /// When non-empty, ClickUp uses this array as the comment body.
     /// Omitted from the request body when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub comment: Vec<CommentContentItem>,

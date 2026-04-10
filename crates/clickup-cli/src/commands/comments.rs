@@ -200,7 +200,7 @@ async fn create_comment(
     print_mention_summary(&resolved, &unresolved);
 
     let request = CreateCommentRequest {
-        comment_text: message.to_string(),
+        comment_text: if comment_content.is_empty() { message.to_string() } else { String::new() },
         notify_all: if notify_all { Some(true) } else { None },
         comment: comment_content,
     };
@@ -228,7 +228,7 @@ async fn reply_comment(
     print_mention_summary(&resolved, &unresolved);
 
     let request = CreateCommentRequest {
-        comment_text: message.to_string(),
+        comment_text: if comment_content.is_empty() { message.to_string() } else { String::new() },
         notify_all: if notify_all { Some(true) } else { None },
         comment: comment_content,
     };
