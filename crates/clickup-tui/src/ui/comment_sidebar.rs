@@ -13,6 +13,7 @@ use crate::theme::THEME;
 /// array, styling @mention tags as cyan+bold.
 ///
 /// Falls back to rendering `plain_text` if `content` is empty.
+#[allow(dead_code)]
 fn comment_body_spans<'a>(
     content: &'a [CommentContentItem],
     plain_text: &'a str,
@@ -89,7 +90,7 @@ fn render_comment_body_lines<'a>(
                 let parts: Vec<&str> = text.split('\n').collect();
                 for (i, part) in parts.iter().enumerate() {
                     if i > 0 {
-                        out.push(Line::from(current_line.drain(..).collect::<Vec<_>>()));
+                        out.push(Line::from(std::mem::take(&mut current_line)));
                         current_line = vec![Span::styled(indent.to_string(), bg_style)];
                     }
                     if !part.is_empty() {
@@ -169,7 +170,7 @@ fn highlight_compose_mentions<'a>(
 
     // Sort keys longest-first for greedy match.
     let mut map_keys: Vec<&String> = mention_map.keys().collect();
-    map_keys.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
+    map_keys.sort_by_key(|b| std::cmp::Reverse(b.chars().count()));
 
     // Track byte offset alongside char index.
     let char_byte_offsets: Vec<usize> = {
@@ -572,7 +573,7 @@ pub fn render_mention_picker(app: &App, frame: &mut Frame, input_area: Rect) {
     let visible_count = members.len().min(5);
     // Height: border top + border bottom + rows (at least 1 for "no members")
     let picker_height = (visible_count.max(1) as u16) + 2;
-    let picker_width = input_area.width.min(40).max(20);
+    let picker_width = input_area.width.clamp(20, 40);
 
     // Position: just above the input area, right-aligned within the sidebar.
     let y = input_area.y.saturating_sub(picker_height);

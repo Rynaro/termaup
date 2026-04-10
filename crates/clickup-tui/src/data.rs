@@ -81,6 +81,7 @@ pub fn spawn_load_folders_and_lists(
 }
 
 /// Loads tasks for a list and sends the result.
+#[allow(dead_code)]
 pub fn spawn_load_tasks(
     client: &ClickUpClient,
     tx: &mpsc::UnboundedSender<AppEvent>,

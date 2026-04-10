@@ -283,6 +283,7 @@ pub struct StatusGroup {
     /// Status hex colour.
     pub color: String,
     /// Status type ("open", "closed", "custom").
+    #[allow(dead_code)]
     pub status_type: String,
     /// Indices into `App::tasks` for tasks in this group.
     pub task_indices: Vec<usize>,
@@ -639,6 +640,7 @@ impl App {
     }
 
     /// Total number of visible tasks across all status groups.
+    #[allow(dead_code)]
     pub fn total_grouped_tasks(&self) -> usize {
         self.status_groups
             .iter()

@@ -1122,8 +1122,7 @@ fn build_tui_comment_content(
 
     // Sort map keys longest-first for greedy matching.
     let mut map_keys: Vec<&String> = mention_map.keys().collect();
-    map_keys.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
-
+    map_keys.sort_by_key(|b| std::cmp::Reverse(b.chars().count()));
     while i < chars.len() {
         if chars[i] == '@' {
             let at_boundary = i == 0 || chars[i - 1].is_whitespace();
