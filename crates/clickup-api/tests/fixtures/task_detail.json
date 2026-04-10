@@ -78,8 +78,81 @@
     }
   ],
   "custom_fields": [
-    { "id": "cf_001", "name": "Story Points", "type": "number", "value": 5 },
-    { "id": "cf_002", "name": "Component", "type": "drop_down", "value": "auth" }
+    {
+      "id": "cf_001",
+      "name": "Story Points",
+      "type": "number",
+      "type_config": { "precision": 0 },
+      "value": 5,
+      "required": false
+    },
+    {
+      "id": "cf_002",
+      "name": "Component",
+      "type": "drop_down",
+      "type_config": {
+        "sorting": "manual",
+        "options": [
+          { "id": "opt_auth", "name": "Auth", "color": "#FF5733", "orderindex": 0 },
+          { "id": "opt_api",  "name": "API",  "color": "#3380FF", "orderindex": 1 },
+          { "id": "opt_ui",   "name": "UI",   "color": "#33FF57", "orderindex": 2 }
+        ]
+      },
+      "value": "opt_auth"
+    },
+    {
+      "id": "cf_003",
+      "name": "Tags",
+      "type": "labels",
+      "type_config": {
+        "sorting": "manual",
+        "options": [
+          { "id": "lbl_backend",  "label": "Backend",  "color": "#3380FF", "orderindex": 0 },
+          { "id": "lbl_security", "label": "Security", "color": "#FF5733", "orderindex": 1 }
+        ]
+      },
+      "value": ["lbl_backend", "lbl_security"]
+    },
+    {
+      "id": "cf_004",
+      "name": "Budget",
+      "type": "currency",
+      "type_config": { "precision": 2, "currency_type": "EUR" },
+      "value": 1500.00
+    },
+    {
+      "id": "cf_005",
+      "name": "Satisfaction",
+      "type": "emoji",
+      "type_config": { "code_point": "2b50", "count": 5 },
+      "value": 4
+    },
+    {
+      "id": "cf_006",
+      "name": "Assignees",
+      "type": "users",
+      "type_config": {},
+      "value": [
+        { "id": 12345678, "username": "John Doe", "email": "john@example.com" }
+      ]
+    },
+    {
+      "id": "cf_007",
+      "name": "Progress",
+      "type": "manual_progress",
+      "type_config": { "method": "manual", "start": 0, "end": 100 },
+      "value": { "current": 60 }
+    },
+    {
+      "id": "cf_008",
+      "name": "Office Location",
+      "type": "location",
+      "type_config": {},
+      "value": {
+        "location": { "lat": 37.7749, "lng": -122.4194 },
+        "formatted_address": "San Francisco, CA, USA"
+      }
+    }
   ],
   "checklists": [
     {

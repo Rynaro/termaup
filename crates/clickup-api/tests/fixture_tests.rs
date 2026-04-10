@@ -3,8 +3,8 @@
 use std::fs;
 
 use clickup_api::models::{
-    AuthenticatedUser, CommentsResponse, FoldersResponse, ListsResponse, SpacesResponse, Task,
-    TasksResponse, WorkspacesResponse,
+    AuthenticatedUser, CommentsResponse, CustomField, FoldersResponse, ListsResponse,
+    SpacesResponse, Task, TasksResponse, WorkspacesResponse,
 };
 
 fn load_fixture(name: &str) -> String {
@@ -141,10 +141,58 @@ fn test_deserialize_task_detail_fixture() {
 
     // Custom fields
     let fields = task.custom_fields.as_ref().unwrap();
-    assert_eq!(fields.len(), 2);
+    assert_eq!(fields.len(), 8, "fixture should have 8 custom fields");
+
+    // Story Points: number
     assert_eq!(fields[0].name, "Story Points");
     assert_eq!(fields[0].field_type, "number");
+    assert_eq!(fields[0].display_value(), "5");
+
+    // Component: drop_down — should resolve UUID to name
     assert_eq!(fields[1].name, "Component");
+    assert_eq!(fields[1].field_type, "drop_down");
+    assert_eq!(
+        fields[1].display_value(),
+        "Auth",
+        "drop_down should resolve option UUID to display name"
+    );
+
+    // Tags: labels — should resolve UUID array to label names
+    assert_eq!(fields[2].name, "Tags");
+    assert_eq!(fields[2].field_type, "labels");
+    assert_eq!(
+        fields[2].display_value(),
+        "Backend, Security",
+        "labels should resolve UUIDs to label names"
+    );
+
+    // Budget: currency
+    assert_eq!(fields[3].name, "Budget");
+    assert_eq!(fields[3].field_type, "currency");
+    assert!(
+        fields[3].display_value().contains("EUR"),
+        "currency should include currency_type symbol"
+    );
+
+    // Satisfaction: emoji
+    assert_eq!(fields[4].name, "Satisfaction");
+    assert_eq!(fields[4].field_type, "emoji");
+    assert_eq!(fields[4].display_value(), "⭐⭐⭐⭐");
+
+    // Assignees: users
+    assert_eq!(fields[5].name, "Assignees");
+    assert_eq!(fields[5].field_type, "users");
+    assert_eq!(fields[5].display_value(), "John Doe");
+
+    // Progress: manual_progress
+    assert_eq!(fields[6].name, "Progress");
+    assert_eq!(fields[6].field_type, "manual_progress");
+    assert_eq!(fields[6].display_value(), "60%");
+
+    // Office Location: location
+    assert_eq!(fields[7].name, "Office Location");
+    assert_eq!(fields[7].field_type, "location");
+    assert_eq!(fields[7].display_value(), "San Francisco, CA, USA");
 
     // Checklists
     assert_eq!(task.checklists.len(), 1);
@@ -201,6 +249,56 @@ fn test_deserialize_task_with_priority_false() {
         task.priority.is_none(),
         "priority: false should map to None"
     );
+}
+
+#[test]
+fn test_custom_field_edge_cases_fixture() {
+    let json = load_fixture("task_custom_fields_edge.json");
+    let task: Task = serde_json::from_str(&json)
+        .expect("edge case custom fields task should deserialize");
+
+    let fields = task.custom_fields.as_ref().unwrap();
+    assert_eq!(fields.len(), 8);
+
+    // 1: no type_config — falls back to raw UUID
+    assert_eq!(fields[0].name, "No Config Dropdown");
+    assert_eq!(fields[0].display_value(), "some-uuid-without-config");
+
+    // 2: null type_config — falls back to raw UUID
+    assert_eq!(fields[1].name, "Null Config Dropdown");
+    assert!(fields[1].type_config.is_none());
+    assert_eq!(fields[1].display_value(), "another-uuid");
+
+    // 3: unknown option ID — falls back to raw UUID
+    assert_eq!(fields[2].name, "Unknown Option ID");
+    assert_eq!(
+        fields[2].display_value(),
+        "opt_completely_unknown",
+        "unknown option ID should fall back to raw UUID"
+    );
+
+    // 4: null value — returns dash
+    assert_eq!(fields[3].name, "Null Value Field");
+    assert!(fields[3].value.is_none());
+    assert_eq!(fields[3].display_value(), "—");
+
+    // 5: absent value — returns dash
+    assert_eq!(fields[4].name, "Absent Value Field");
+    assert!(fields[4].value.is_none());
+    assert_eq!(fields[4].display_value(), "—");
+
+    // 6: empty labels array — returns dash
+    assert_eq!(fields[5].name, "Empty Options Labels");
+    assert_eq!(fields[5].display_value(), "—");
+
+    // 7: future/unknown type — no panic, returns some string
+    assert_eq!(fields[6].name, "Future Field Type");
+    let result = fields[6].display_value();
+    assert!(!result.is_empty(), "unknown type should return non-empty string");
+
+    // 8: extra API fields silently ignored
+    assert_eq!(fields[7].name, "Field With Extra API Fields");
+    assert_eq!(fields[7].display_value(), "42");
 }
 
 #[test]
