@@ -4,6 +4,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{ClickUpError, Result};
 
+/// Color display mode controlling how API-supplied hex colors are used in the TUI.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum ColorMode {
+    /// Full color: renders colored chips/badges using API-supplied hex colors (default).
+    #[default]
+    Cozy,
+    /// Monochrome: uses only the theme palette — no API hex colors applied.
+    Sober,
+}
+
 /// Output format for CLI command results.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
@@ -35,6 +46,10 @@ pub struct Config {
     /// Default output format for CLI commands.
     #[serde(default)]
     pub output_format: OutputFormat,
+
+    /// Color display mode for the TUI.
+    #[serde(default)]
+    pub color_mode: ColorMode,
 }
 
 fn default_api_base_url() -> String {
@@ -48,6 +63,7 @@ impl Default for Config {
             default_space_id: None,
             api_base_url: default_api_base_url(),
             output_format: OutputFormat::default(),
+            color_mode: ColorMode::default(),
         }
     }
 }
@@ -115,6 +131,7 @@ mod tests {
             default_space_id: Some("space_456".into()),
             api_base_url: "https://api.clickup.com/api/v2".into(),
             output_format: OutputFormat::Json,
+            color_mode: ColorMode::Sober,
         };
 
         let toml_str = toml::to_string_pretty(&config).expect("serialize");
@@ -138,5 +155,44 @@ mod tests {
     #[test]
     fn test_output_format_default_is_table() {
         assert_eq!(OutputFormat::default(), OutputFormat::Table);
+    }
+
+    #[test]
+    fn test_color_mode_default_is_cozy() {
+        assert_eq!(ColorMode::default(), ColorMode::Cozy);
+    }
+
+    #[test]
+    fn test_color_mode_serializes_lowercase() {
+        let config = Config {
+            color_mode: ColorMode::Cozy,
+            ..Config::default()
+        };
+        let toml_str = toml::to_string_pretty(&config).expect("serialize");
+        assert!(toml_str.contains("color_mode = \"cozy\""), "{toml_str}");
+
+        let config2 = Config {
+            color_mode: ColorMode::Sober,
+            ..Config::default()
+        };
+        let toml_str2 = toml::to_string_pretty(&config2).expect("serialize");
+        assert!(toml_str2.contains("color_mode = \"sober\""), "{toml_str2}");
+    }
+
+    #[test]
+    fn test_color_mode_deserializes_from_toml() {
+        let toml_str = r#"
+            api_base_url = "https://api.clickup.com/api/v2"
+            color_mode = "sober"
+        "#;
+        let config: Config = toml::from_str(toml_str).expect("deserialize");
+        assert_eq!(config.color_mode, ColorMode::Sober);
+    }
+
+    #[test]
+    fn test_color_mode_missing_field_defaults_to_cozy() {
+        let toml_str = r#"api_base_url = "https://api.clickup.com/api/v2""#;
+        let config: Config = toml::from_str(toml_str).expect("deserialize");
+        assert_eq!(config.color_mode, ColorMode::Cozy);
     }
 }

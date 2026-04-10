@@ -95,7 +95,9 @@ pub fn resolve_mentions(text: &str, members: &[WorkspaceMember]) -> MentionResol
                 // Collect the username token (alphanumeric + underscore + hyphen).
                 let token_start = i + 1;
                 let mut j = token_start;
-                while j < chars.len() && (chars[j].is_alphanumeric() || chars[j] == '_' || chars[j] == '-') {
+                while j < chars.len()
+                    && (chars[j].is_alphanumeric() || chars[j] == '_' || chars[j] == '-')
+                {
                     j += 1;
                 }
                 let username: String = chars[token_start..j].iter().collect();
@@ -104,13 +106,16 @@ pub fn resolve_mentions(text: &str, members: &[WorkspaceMember]) -> MentionResol
                     // Flush any accumulated plain text before this mention.
                     let preceding: String = chars[segment_start..i].iter().collect();
                     if !preceding.is_empty() {
-                        content.push(CommentContentItem::Text { text: preceding, attributes: None });
+                        content.push(CommentContentItem::Text {
+                            text: preceding,
+                            attributes: None,
+                        });
                     }
 
                     // Try to find a matching member (case-insensitive).
-                    let member = members.iter().find(|m| {
-                        m.user.username.eq_ignore_ascii_case(&username)
-                    });
+                    let member = members
+                        .iter()
+                        .find(|m| m.user.username.eq_ignore_ascii_case(&username));
 
                     if let Some(m) = member {
                         content.push(CommentContentItem::Tag {
@@ -144,10 +149,17 @@ pub fn resolve_mentions(text: &str, members: &[WorkspaceMember]) -> MentionResol
     // Flush remaining plain text.
     let tail: String = chars[segment_start..].iter().collect();
     if !tail.is_empty() {
-        content.push(CommentContentItem::Text { text: tail, attributes: None });
+        content.push(CommentContentItem::Text {
+            text: tail,
+            attributes: None,
+        });
     }
 
-    MentionResolution { comment_content: content, resolved, unresolved }
+    MentionResolution {
+        comment_content: content,
+        resolved,
+        unresolved,
+    }
 }
 
 /// A comment on a ClickUp task.
@@ -447,7 +459,11 @@ mod tests {
             other => panic!("expected Text, got {other:?}"),
         }
         match &comment.comment[1] {
-            CommentContentItem::Tag { content_type, user, text } => {
+            CommentContentItem::Tag {
+                content_type,
+                user,
+                text,
+            } => {
                 assert_eq!(content_type, "tag");
                 assert_eq!(user.id, 123);
                 assert_eq!(user.username.as_deref(), Some("alice"));
@@ -465,7 +481,10 @@ mod tests {
     fn test_deserialize_comment_no_structured_content_defaults_to_empty() {
         let json = serde_json::json!({ "id": "c_plain", "comment_text": "plain text" });
         let comment: Comment = serde_json::from_value(json).expect("deserialize plain comment");
-        assert!(comment.comment.is_empty(), "comment array should default to empty");
+        assert!(
+            comment.comment.is_empty(),
+            "comment array should default to empty"
+        );
     }
 
     #[test]
@@ -478,7 +497,8 @@ mod tests {
                 { "text": "U0001F60A", "type": "emoticon", "emoticon": { "code": "1f60a" } }
             ]
         });
-        let comment: Comment = serde_json::from_value(json).expect("deserialize comment with emoticon");
+        let comment: Comment =
+            serde_json::from_value(json).expect("deserialize comment with emoticon");
         assert_eq!(comment.comment.len(), 1);
         // Emoticons have a "text" field → matched as Text; extra keys stored in attributes or ignored.
         assert!(
@@ -507,8 +527,8 @@ mod tests {
 
     #[test]
     fn test_serialize_create_request_with_mentions_includes_comment_array() {
-        use super::super::workspace::{WorkspaceMember};
         use super::super::user::User;
+        use super::super::workspace::WorkspaceMember;
 
         let member = WorkspaceMember {
             user: User {
@@ -527,7 +547,10 @@ mod tests {
             notify_all: Some(true),
         };
         let value = serde_json::to_value(&req).expect("serialize");
-        assert!(value.get("comment").is_some(), "comment key must be present");
+        assert!(
+            value.get("comment").is_some(),
+            "comment key must be present"
+        );
         assert_eq!(value["comment"][1]["type"], "tag");
         assert_eq!(value["comment"][1]["user"]["id"], 42);
     }
@@ -540,13 +563,16 @@ mod tests {
             notify_all: None,
         };
         let value = serde_json::to_value(&req).expect("serialize");
-        assert!(value.get("comment").is_none(), "empty comment array must be omitted");
+        assert!(
+            value.get("comment").is_none(),
+            "empty comment array must be omitted"
+        );
     }
 
     #[test]
     fn test_resolve_mentions_resolves_matching_members() {
-        use super::super::workspace::WorkspaceMember;
         use super::super::user::User;
+        use super::super::workspace::WorkspaceMember;
 
         let members = vec![
             WorkspaceMember {
@@ -576,16 +602,18 @@ mod tests {
         assert!(result.unresolved.is_empty());
         // 5 items: "Please review ", tag alice, " and ", tag bob, ""
         // (trailing empty text may or may not be emitted)
-        let tags: Vec<_> = result.comment_content.iter().filter(|i| {
-            matches!(i, CommentContentItem::Tag { .. })
-        }).collect();
+        let tags: Vec<_> = result
+            .comment_content
+            .iter()
+            .filter(|i| matches!(i, CommentContentItem::Tag { .. }))
+            .collect();
         assert_eq!(tags.len(), 2);
     }
 
     #[test]
     fn test_resolve_mentions_email_not_triggered() {
-        use super::super::workspace::WorkspaceMember;
         use super::super::user::User;
+        use super::super::workspace::WorkspaceMember;
 
         let member = WorkspaceMember {
             user: User {
@@ -598,7 +626,10 @@ mod tests {
             },
         };
         let result = resolve_mentions("Email user@example.com here", &[member]);
-        assert!(result.resolved.is_empty(), "email @ should not trigger a mention");
+        assert!(
+            result.resolved.is_empty(),
+            "email @ should not trigger a mention"
+        );
         assert!(result.unresolved.is_empty());
     }
 
@@ -608,7 +639,12 @@ mod tests {
         assert!(result.resolved.is_empty());
         assert_eq!(result.unresolved, vec!["unknown"]);
         // Content should be plain text segments only
-        assert!(result.comment_content.iter().all(|i| matches!(i, CommentContentItem::Text { .. })));
+        assert!(
+            result
+                .comment_content
+                .iter()
+                .all(|i| matches!(i, CommentContentItem::Text { .. }))
+        );
     }
 
     #[test]
@@ -625,8 +661,8 @@ mod tests {
 
     #[test]
     fn test_resolve_mentions_at_start_of_text() {
-        use super::super::workspace::WorkspaceMember;
         use super::super::user::User;
+        use super::super::workspace::WorkspaceMember;
 
         let member = WorkspaceMember {
             user: User {
@@ -641,6 +677,9 @@ mod tests {
         let result = resolve_mentions("@carol can you check?", &[member]);
         assert_eq!(result.resolved, vec!["carol"]);
         let first = &result.comment_content[0];
-        assert!(matches!(first, CommentContentItem::Tag { .. }), "first item should be tag");
+        assert!(
+            matches!(first, CommentContentItem::Tag { .. }),
+            "first item should be tag"
+        );
     }
 }

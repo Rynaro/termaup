@@ -13,6 +13,7 @@ use crate::theme::THEME;
 /// array, styling @mention tags as cyan+bold.
 ///
 /// Falls back to rendering `plain_text` if `content` is empty.
+#[allow(dead_code)]
 fn comment_body_spans<'a>(
     content: &'a [CommentContentItem],
     plain_text: &'a str,
@@ -89,7 +90,7 @@ fn render_comment_body_lines<'a>(
                 let parts: Vec<&str> = text.split('\n').collect();
                 for (i, part) in parts.iter().enumerate() {
                     if i > 0 {
-                        out.push(Line::from(current_line.drain(..).collect::<Vec<_>>()));
+                        out.push(Line::from(std::mem::take(&mut current_line)));
                         current_line = vec![Span::styled(indent.to_string(), bg_style)];
                     }
                     if !part.is_empty() {
@@ -169,7 +170,7 @@ fn highlight_compose_mentions<'a>(
 
     // Sort keys longest-first for greedy match.
     let mut map_keys: Vec<&String> = mention_map.keys().collect();
-    map_keys.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
+    map_keys.sort_by_key(|b| std::cmp::Reverse(b.chars().count()));
 
     // Track byte offset alongside char index.
     let char_byte_offsets: Vec<usize> = {
@@ -183,7 +184,9 @@ fn highlight_compose_mentions<'a>(
         offsets
     };
 
-    let mention_style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+    let mention_style = Style::default()
+        .fg(Color::Cyan)
+        .add_modifier(Modifier::BOLD);
 
     while i < len {
         if chars[i] == '@' {
@@ -355,12 +358,9 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
         ]));
 
         // Comment text lines
-        for body_line in render_comment_body_lines(
-            &comment.comment,
-            &comment.comment_text,
-            "    ",
-            bg_style,
-        ) {
+        for body_line in
+            render_comment_body_lines(&comment.comment, &comment.comment_text, "    ", bg_style)
+        {
             lines.push(body_line);
         }
 
@@ -517,17 +517,18 @@ fn render_input_area(app: &App, frame: &mut Frame, area: Rect) {
     let base_fg = Style::default().fg(THEME.fg);
     if text.is_empty() {
         // Show cursor on empty input.
-        input_lines.push(Line::from(vec![
-            Span::raw(" "),
-            Span::styled("█", base_fg),
-        ]));
+        input_lines.push(Line::from(vec![Span::raw(" "), Span::styled("█", base_fg)]));
     } else {
         let lines_iter: Vec<&str> = text.split('\n').collect();
         let total = lines_iter.len();
         for (i, line) in lines_iter.into_iter().enumerate() {
             let is_last = i == total - 1;
             let mut spans = vec![Span::raw(" ")];
-            spans.extend(highlight_compose_mentions(line, base_fg, &app.comment_mention_map));
+            spans.extend(highlight_compose_mentions(
+                line,
+                base_fg,
+                &app.comment_mention_map,
+            ));
             if is_last {
                 spans.push(Span::styled("█", base_fg));
             }
@@ -572,7 +573,7 @@ pub fn render_mention_picker(app: &App, frame: &mut Frame, input_area: Rect) {
     let visible_count = members.len().min(5);
     // Height: border top + border bottom + rows (at least 1 for "no members")
     let picker_height = (visible_count.max(1) as u16) + 2;
-    let picker_width = input_area.width.min(40).max(20);
+    let picker_width = input_area.width.clamp(20, 40);
 
     // Position: just above the input area, right-aligned within the sidebar.
     let y = input_area.y.saturating_sub(picker_height);
@@ -642,10 +643,7 @@ pub fn render_mention_picker(app: &App, frame: &mut Frame, input_area: Rect) {
             } else {
                 Style::default().fg(THEME.fg)
             };
-            let label = format!(
-                " {} ",
-                member.user.username
-            );
+            let label = format!(" {} ", member.user.username);
             frame.render_widget(Paragraph::new(Span::styled(label, style)), *chunk);
         }
     }

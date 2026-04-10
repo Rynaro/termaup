@@ -1,0 +1,170 @@
+feature: custom-field-display
+date: "2026-04-10"
+version: "1.0"
+confidence: 88
+complexity: 6
+
+stories:
+  - id: cf-model-type-config
+    title: "Extend CustomField model with type_config"
+    timebox: "2d"
+    depends_on: []
+    status: pending
+    criteria:
+      - "CustomField struct has type_config: Option<serde_json::Value> with #[serde(default)]"
+      - "Deserialization succeeds with type_config present, absent, or null"
+      - "Unknown fields (required, date_created, etc.) are silently ignored"
+    action_plan:
+      - action: Modify
+        file: "crates/clickup-api/src/models/task.rs"
+        details: "Add type_config field to CustomField struct"
+      - action: Test
+        file: "crates/clickup-api/src/models/task.rs"
+        details: "Update sample_task_json with type_config, add type-mixed tests"
+      - action: Modify
+        file: "crates/clickup-api/tests/fixtures/task_detail.json"
+        details: "Add type_config to dropdown custom field"
+    agent_hints:
+      class: builder
+      context:
+        - "crates/clickup-api/src/models/task.rs"
+      gates:
+        - "P0: cargo build --workspace"
+        - "P0: No .unwrap() outside test code"
+        - "P1: cargo test -p clickup-api"
+        - "P2: cargo clippy -p clickup-api -- -D warnings"
+
+  - id: cf-display-value-method
+    title: "Add display_value() method on CustomField"
+    timebox: "3d"
+    depends_on: [cf-model-type-config]
+    status: pending
+    criteria:
+      - "drop_down resolves option UUID via type_config.options to display name"
+      - "labels resolves UUID array via type_config.options to display labels"
+      - "emoji renders rating as repeated Unicode emoji"
+      - "currency prepends currency_type to formatted number"
+      - "users extracts usernames from value array"
+      - "manual_progress shows percentage"
+      - "location shows formatted_address"
+      - "Graceful fallback for missing type_config or unknown option ID"
+      - "Returns '—' for None value"
+    action_plan:
+      - action: Create
+        file: "crates/clickup-api/src/models/task.rs"
+        details: "impl CustomField { pub fn display_value(&self) -> String } with all field type handlers"
+      - action: Test
+        file: "crates/clickup-api/src/models/task.rs"
+        details: "Unit tests for each field type + edge cases"
+    agent_hints:
+      class: builder
+      context:
+        - "crates/clickup-tui/src/ui/task_detail.rs:395-457"
+        - "crates/clickup-cli/src/commands/tasks.rs:309-370"
+      gates:
+        - "P0: cargo build --workspace"
+        - "P0: No .unwrap() outside tests, no panic!() in library"
+        - "P1: Unit tests for every field type"
+        - "P1: Edge case tests"
+        - "P2: cargo clippy -p clickup-api -- -D warnings"
+
+  - id: cf-tui-use-display-value
+    title: "Update TUI task detail to use display_value()"
+    timebox: "1d"
+    depends_on: [cf-display-value-method]
+    status: pending
+    criteria:
+      - "TUI calls field.display_value() instead of format_custom_field_value()"
+      - "format_custom_field_value() function is removed"
+      - "Backward-compatible for number/checkbox/date/text fields"
+    action_plan:
+      - action: Modify
+        file: "crates/clickup-tui/src/ui/task_detail.rs"
+        details: "Replace format_custom_field_value() call with field.display_value(), delete old function"
+    agent_hints:
+      class: builder
+      context:
+        - "crates/clickup-tui/src/ui/task_detail.rs:155-179"
+      gates:
+        - "P0: cargo build -p clickup-tui"
+        - "P1: cargo test -p clickup-tui"
+
+  - id: cf-cli-use-display-value
+    title: "Update CLI task view to use display_value()"
+    timebox: "1d"
+    depends_on: [cf-display-value-method]
+    status: pending
+    criteria:
+      - "CLI calls field.display_value() instead of format_custom_field()"
+      - "format_custom_field() function is removed"
+      - "Backward-compatible for number/checkbox/date/text fields"
+    action_plan:
+      - action: Modify
+        file: "crates/clickup-cli/src/commands/tasks.rs"
+        details: "Replace format_custom_field() call with field.display_value(), delete old function"
+    agent_hints:
+      class: builder
+      context:
+        - "crates/clickup-cli/src/commands/tasks.rs:219-228"
+      gates:
+        - "P0: cargo build -p clickup-cli"
+        - "P1: cargo test -p clickup-cli"
+
+  - id: cf-test-fixtures
+    title: "Update test fixtures and add integration tests"
+    timebox: "2d"
+    depends_on: [cf-model-type-config]
+    status: pending
+    criteria:
+      - "task_detail.json includes type_config.options for dropdown and labels"
+      - "Fixtures include emoji, currency, users, location, progress custom fields"
+      - "Edge-case fixture covers missing type_config, unknown option ID, null value"
+    action_plan:
+      - action: Modify
+        file: "crates/clickup-api/tests/fixtures/task_detail.json"
+        details: "Add type_config to dropdown, add labels/emoji/currency/users/location/progress fields"
+      - action: Create
+        file: "crates/clickup-api/tests/fixtures/task_custom_fields_edge.json"
+        details: "Edge case fixture"
+      - action: Modify
+        file: "crates/clickup-api/tests/fixture_tests.rs"
+        details: "Add display_value() assertions"
+    agent_hints:
+      class: builder
+      context:
+        - "crates/clickup-api/tests/fixtures/task_detail.json"
+        - "crates/clickup-api/tests/fixture_tests.rs"
+      gates:
+        - "P0: cargo test -p clickup-api"
+        - "P1: Every field type has fixture + assertion"
+
+  - id: cf-document-quirks
+    title: "Document custom field quirks"
+    timebox: "1d"
+    depends_on: [cf-model-type-config]
+    status: pending
+    criteria:
+      - "docs/clickup-api-quirks.md has custom field section"
+      - "Documents dropdown UUID resolution, labels vs name key difference"
+    action_plan:
+      - action: Modify
+        file: "docs/clickup-api-quirks.md"
+        details: "Add Custom Fields section with value format table"
+    agent_hints:
+      class: builder
+      context:
+        - "docs/clickup-api-quirks.md"
+      gates:
+        - "P2: Documentation follows existing format"
+
+execution_sequence:
+  - phase: 1
+    stories: [cf-model-type-config]
+  - phase: 2
+    parallel:
+      - stories: [cf-display-value-method]
+      - stories: [cf-test-fixtures, cf-document-quirks]
+  - phase: 3
+    parallel:
+      - stories: [cf-tui-use-display-value]
+      - stories: [cf-cli-use-display-value]

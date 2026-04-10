@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
+use clickup_api::config::ColorMode;
 use clickup_api::models::{Comment, Folder, List, Space, Status, Task, User, Workspace};
 
 use crate::filters::TaskFilters;
@@ -256,6 +257,8 @@ pub struct App {
     pub comment_mention_map: HashMap<String, i64>,
 
     // --- UI state ---
+    /// Color display mode loaded from config (Cozy/Sober).
+    pub color_mode: ColorMode,
     /// Error message to display (auto-dismisses).
     pub error_message: Option<String>,
     /// When the current error message was set.
@@ -280,6 +283,7 @@ pub struct StatusGroup {
     /// Status hex colour.
     pub color: String,
     /// Status type ("open", "closed", "custom").
+    #[allow(dead_code)]
     pub status_type: String,
     /// Indices into `App::tasks` for tasks in this group.
     pub task_indices: Vec<usize>,
@@ -338,6 +342,7 @@ impl App {
             error_message: None,
             error_set_at: None,
             loading: false,
+            color_mode: ColorMode::default(),
             scroll_offset: 0,
             show_help: false,
             tick_count: 0,
@@ -635,6 +640,7 @@ impl App {
     }
 
     /// Total number of visible tasks across all status groups.
+    #[allow(dead_code)]
     pub fn total_grouped_tasks(&self) -> usize {
         self.status_groups
             .iter()
@@ -1034,7 +1040,7 @@ mod tests {
 
     #[test]
     fn test_filtered_members_empty_filter_returns_all() {
-        use clickup_api::models::{Workspace, WorkspaceMember, User};
+        use clickup_api::models::{User, Workspace, WorkspaceMember};
 
         let mut app = App::new();
         app.current_workspace = Some(Workspace {
@@ -1044,10 +1050,24 @@ mod tests {
             avatar: None,
             members: vec![
                 WorkspaceMember {
-                    user: User { id: 1, username: "alice".to_string(), email: "a@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                    user: User {
+                        id: 1,
+                        username: "alice".to_string(),
+                        email: "a@e.com".to_string(),
+                        color: None,
+                        profile_picture: None,
+                        initials: None,
+                    },
                 },
                 WorkspaceMember {
-                    user: User { id: 2, username: "bob".to_string(), email: "b@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                    user: User {
+                        id: 2,
+                        username: "bob".to_string(),
+                        email: "b@e.com".to_string(),
+                        color: None,
+                        profile_picture: None,
+                        initials: None,
+                    },
                 },
             ],
         });
@@ -1056,7 +1076,7 @@ mod tests {
 
     #[test]
     fn test_filtered_members_case_insensitive_filter() {
-        use clickup_api::models::{Workspace, WorkspaceMember, User};
+        use clickup_api::models::{User, Workspace, WorkspaceMember};
 
         let mut app = App::new();
         app.current_workspace = Some(Workspace {
@@ -1066,10 +1086,24 @@ mod tests {
             avatar: None,
             members: vec![
                 WorkspaceMember {
-                    user: User { id: 1, username: "Alice".to_string(), email: "a@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                    user: User {
+                        id: 1,
+                        username: "Alice".to_string(),
+                        email: "a@e.com".to_string(),
+                        color: None,
+                        profile_picture: None,
+                        initials: None,
+                    },
                 },
                 WorkspaceMember {
-                    user: User { id: 2, username: "bob".to_string(), email: "b@e.com".to_string(), color: None, profile_picture: None, initials: None },
+                    user: User {
+                        id: 2,
+                        username: "bob".to_string(),
+                        email: "b@e.com".to_string(),
+                        color: None,
+                        profile_picture: None,
+                        initials: None,
+                    },
                 },
             ],
         });

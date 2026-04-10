@@ -31,6 +31,7 @@ pub enum DataPayload {
     /// Folders and folderless lists loaded for a space.
     FoldersAndLists(Vec<Folder>, Vec<List>),
     /// Tasks loaded for a list.
+    #[allow(dead_code)]
     Tasks(Vec<Task>),
     /// Single task detail loaded.
     TaskDetail(Box<Task>),

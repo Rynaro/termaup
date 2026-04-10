@@ -1,0 +1,46 @@
+{
+  "session_id": "cf-display-2026-04-10",
+  "feature": "custom-field-display",
+  "created": "2026-04-10T20:59:14Z",
+  "status": "planned",
+  "current_phase": "assemble",
+  "stories": {
+    "cf-model-type-config": {
+      "status": "pending",
+      "depends_on": [],
+      "files": ["crates/clickup-api/src/models/task.rs", "crates/clickup-api/tests/fixtures/task_detail.json"],
+      "verification": []
+    },
+    "cf-display-value-method": {
+      "status": "pending",
+      "depends_on": ["cf-model-type-config"],
+      "files": ["crates/clickup-api/src/models/task.rs"],
+      "verification": []
+    },
+    "cf-tui-use-display-value": {
+      "status": "pending",
+      "depends_on": ["cf-display-value-method"],
+      "files": ["crates/clickup-tui/src/ui/task_detail.rs"],
+      "verification": []
+    },
+    "cf-cli-use-display-value": {
+      "status": "pending",
+      "depends_on": ["cf-display-value-method"],
+      "files": ["crates/clickup-cli/src/commands/tasks.rs"],
+      "verification": []
+    },
+    "cf-test-fixtures": {
+      "status": "pending",
+      "depends_on": ["cf-model-type-config"],
+      "files": ["crates/clickup-api/tests/fixtures/task_detail.json", "crates/clickup-api/tests/fixtures/task_custom_fields_edge.json", "crates/clickup-api/tests/fixture_tests.rs"],
+      "verification": []
+    },
+    "cf-document-quirks": {
+      "status": "pending",
+      "depends_on": ["cf-model-type-config"],
+      "files": ["docs/clickup-api-quirks.md"],
+      "verification": []
+    }
+  },
+  "replanning_history": []
+}

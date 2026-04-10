@@ -1,0 +1,71 @@
+{
+  "id": "task_edge_cf",
+  "name": "Edge Case Custom Fields Task",
+  "status": { "status": "open", "color": "#ccc", "type": "open" },
+  "creator": { "id": 1, "username": "tester", "email": "tester@example.com" },
+  "custom_fields": [
+    {
+      "id": "cf_no_config",
+      "name": "No Config Dropdown",
+      "type": "drop_down",
+      "value": "some-uuid-without-config"
+    },
+    {
+      "id": "cf_null_config",
+      "name": "Null Config Dropdown",
+      "type": "drop_down",
+      "type_config": null,
+      "value": "another-uuid"
+    },
+    {
+      "id": "cf_unknown_option",
+      "name": "Unknown Option ID",
+      "type": "drop_down",
+      "type_config": {
+        "options": [
+          { "id": "opt_known", "name": "Known Option", "orderindex": 0 }
+        ]
+      },
+      "value": "opt_completely_unknown"
+    },
+    {
+      "id": "cf_null_value",
+      "name": "Null Value Field",
+      "type": "number",
+      "type_config": {},
+      "value": null
+    },
+    {
+      "id": "cf_absent_value",
+      "name": "Absent Value Field",
+      "type": "text",
+      "type_config": {}
+    },
+    {
+      "id": "cf_empty_options",
+      "name": "Empty Options Labels",
+      "type": "labels",
+      "type_config": { "options": [] },
+      "value": []
+    },
+    {
+      "id": "cf_future_type",
+      "name": "Future Field Type",
+      "type": "some_new_clickup_type_2027",
+      "type_config": { "some_key": "some_value" },
+      "value": "some future value",
+      "extra_api_field": true
+    },
+    {
+      "id": "cf_extra_api_fields",
+      "name": "Field With Extra API Fields",
+      "type": "number",
+      "type_config": {},
+      "value": 42,
+      "required": true,
+      "date_created": "1710000000000",
+      "hide_from_guests": false,
+      "permission_level": "create"
+    }
+  ]
+}

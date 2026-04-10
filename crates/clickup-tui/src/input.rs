@@ -765,16 +765,14 @@ fn handle_comment_compose(
             KeyCode::Down | KeyCode::Char('j') => {
                 let count = app.filtered_members().len();
                 if count > 0 {
-                    app.mention_picker_selected =
-                        (app.mention_picker_selected + 1) % count;
+                    app.mention_picker_selected = (app.mention_picker_selected + 1) % count;
                 }
                 return;
             }
             KeyCode::Up | KeyCode::Char('k') => {
                 let count = app.filtered_members().len();
                 if count > 0 {
-                    app.mention_picker_selected =
-                        (app.mention_picker_selected + count - 1) % count;
+                    app.mention_picker_selected = (app.mention_picker_selected + count - 1) % count;
                 }
                 return;
             }
@@ -788,8 +786,7 @@ fn handle_comment_compose(
                     let filter = app.mention_picker_filter.clone();
                     let at_fragment = format!("@{filter}");
                     if app.comment_input_text.ends_with(&at_fragment) {
-                        let new_len =
-                            app.comment_input_text.len() - at_fragment.len();
+                        let new_len = app.comment_input_text.len() - at_fragment.len();
                         app.comment_input_text.truncate(new_len);
                     }
                     app.comment_input_text.push('@');
@@ -1125,8 +1122,7 @@ fn build_tui_comment_content(
 
     // Sort map keys longest-first for greedy matching.
     let mut map_keys: Vec<&String> = mention_map.keys().collect();
-    map_keys.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
-
+    map_keys.sort_by_key(|b| std::cmp::Reverse(b.chars().count()));
     while i < chars.len() {
         if chars[i] == '@' {
             let at_boundary = i == 0 || chars[i - 1].is_whitespace();
@@ -1156,7 +1152,11 @@ fn build_tui_comment_content(
                     }
                     content.push(CommentContentItem::Tag {
                         content_type: "tag".to_string(),
-                        user: TaggedUser { id: user_id, username: Some(token_username), email: None },
+                        user: TaggedUser {
+                            id: user_id,
+                            username: Some(token_username),
+                            email: None,
+                        },
                         text: None,
                     });
                     let end = i + 1 + token_len;
@@ -1210,7 +1210,10 @@ fn build_tui_comment_content(
 
     let tail: String = chars[segment_start..].iter().collect();
     if !tail.is_empty() {
-        content.push(CommentContentItem::Text { text: tail, attributes: None });
+        content.push(CommentContentItem::Text {
+            text: tail,
+            attributes: None,
+        });
     }
     content
 }
