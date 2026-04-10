@@ -1145,6 +1145,8 @@ fn build_tui_comment_content(
                     }
                 }
                 if let Some((token_len, user_id)) = matched {
+                    // The matched map key is the username (key.chars().count() == token_len).
+                    let token_username: String = chars[i + 1..i + 1 + token_len].iter().collect();
                     let preceding: String = chars[segment_start..i].iter().collect();
                     if !preceding.is_empty() {
                         content.push(CommentContentItem::Text {
@@ -1154,7 +1156,7 @@ fn build_tui_comment_content(
                     }
                     content.push(CommentContentItem::Tag {
                         content_type: "tag".to_string(),
-                        user: TaggedUser { id: user_id, username: None, email: None },
+                        user: TaggedUser { id: user_id, username: Some(token_username), email: None },
                         text: None,
                     });
                     let end = i + 1 + token_len;
@@ -1189,7 +1191,11 @@ fn build_tui_comment_content(
                         }
                         content.push(CommentContentItem::Tag {
                             content_type: "tag".to_string(),
-                            user: TaggedUser { id: m.user.id, username: None, email: None },
+                            user: TaggedUser {
+                                id: m.user.id,
+                                username: Some(m.user.username.clone()),
+                                email: None,
+                            },
                             text: None,
                         });
                         segment_start = j;

@@ -178,10 +178,14 @@ pub fn spawn_create_comment(
         };
         match client.create_task_comment(&task_id, &request).await {
             Ok(mut comment) => {
-                // The POST response is sparse — backfill the text we submitted
-                // when the API omits it.
+                // The POST response is sparse — backfill what we submitted.
                 if comment.comment_text.is_empty() {
                     comment.comment_text = comment_text;
+                }
+                // Backfill the structured comment array so mention highlighting
+                // works immediately without waiting for a reload from the server.
+                if comment.comment.is_empty() && !request.comment.is_empty() {
+                    comment.comment = request.comment;
                 }
                 let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::CommentCreated(
                     Box::new(comment),
@@ -249,6 +253,9 @@ pub fn spawn_create_comment_reply(
             Ok(mut reply) => {
                 if reply.comment_text.is_empty() {
                     reply.comment_text = comment_text;
+                }
+                if reply.comment.is_empty() && !request.comment.is_empty() {
+                    reply.comment = request.comment;
                 }
                 let _ = tx.send(AppEvent::DataLoaded(Box::new(DataPayload::ReplyCreated {
                     parent_comment_id: comment_id,

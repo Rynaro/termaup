@@ -70,12 +70,15 @@ fn render_comment_body_lines<'a>(
     for item in content {
         match item {
             CommentContentItem::Tag { user, text, .. } => {
-                let label = text
-                    .as_deref()
-                    .or_else(|| user.username.as_deref().map(|_| "@"))
-                    .unwrap_or("@mention");
+                let label = if let Some(t) = text.as_deref() {
+                    t.to_string()
+                } else if let Some(uname) = user.username.as_deref() {
+                    format!("@{uname}")
+                } else {
+                    "@mention".to_string()
+                };
                 current_line.push(Span::styled(
-                    label.to_string(),
+                    label,
                     Style::default()
                         .fg(Color::Cyan)
                         .add_modifier(Modifier::BOLD),
