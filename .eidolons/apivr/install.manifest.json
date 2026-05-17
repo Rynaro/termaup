@@ -1,0 +1,201 @@
+{
+  "eidolon": "apivr",
+  "version": "3.1.3",
+  "methodology": "APIVR-Δ",
+  "installed_at": "2026-05-16T23:30:56Z",
+  "target": "./.eidolons/apivr",
+  "hosts_wired": [
+    "claude-code",
+    "copilot"
+  ],
+  "files_written": [
+    {
+      "path": "agent.md",
+      "sha256": "7a4db4d56d12c7e12fa072836d3c2da64d2ae3a99487a57246ebcc6ec7e579e0",
+      "role": "entry-point",
+      "mode": "created"
+    },
+    {
+      "path": "apivr.md",
+      "sha256": "e02c7d53f77defb75f314b66f14772de576bd9ac4f15dc7d0027b10c18642767",
+      "role": "spec",
+      "mode": "created"
+    },
+    {
+      "path": "skills/apivr-methodology.md",
+      "sha256": "00000000",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "skills/context-engineering.md",
+      "sha256": "00000000",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "skills/failure-recovery.md",
+      "sha256": "00000000",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "skills/memory-management.md",
+      "sha256": "00000000",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "skills/verify-incoming/SKILL.md",
+      "sha256": "96e1e505bf2c0b8c1db128776d9889cb4c785e21cf3a7075347b98cd3577899b",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "templates/discovery-report.md",
+      "sha256": "16406dd4bcec74118edca629218979ad9838d4a325dde0bd230ca9b35c630db1",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "templates/execution-plan.md",
+      "sha256": "c541c98f17b98807ce3fc859f56e0627525aad44f9ab220bd2bd7f92f4c0902d",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "templates/reflect-entry.md",
+      "sha256": "dcbd1d61a131e11483200516dee5ac12ef70605bce57a50a4d1b544301b803a4",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "ECL_VERSION",
+      "sha256": "d526eb4e878a23ef26ae190031b4efd2d58ed66789ac049ea3dbaf74c9df7402",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "schemas/ecl-envelope.v1.json",
+      "sha256": "e390664e184388cfd3b64ef0d35b663fc38a8e360fbddbd5c8688ab946715c55",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "schemas/_base-profile.v1.json",
+      "sha256": "a22f92d7f09fdbb599376515f0df9b7de135af945534a9bca9545a4d9f889f78",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "schemas/apivr-completion-report-profile.v1.json",
+      "sha256": "76e0e47a827293f6ca987083af8d3e0ac84cd48f465fe7cac34fd6abefb33a80",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "schemas/repair-failed-report-profile.v1.json",
+      "sha256": "3c63ed334db038d5059f093a61c6bcfda0370b6e900d10481de2b96e5da4907a",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "schemas/scout-report-profile.v1.json",
+      "sha256": "87caf1b1e0acacf8a40a55ad37c6010d6c58e6003bc3fe8acf0a7f2700860e88",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "schemas/spec-profile.v1.json",
+      "sha256": "79ea5a46ecc216739c64c5621295d2112e52862edd43415feb6efb0f5094cbc8",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "schemas/root-cause-report-profile.v1.json",
+      "sha256": "3fd6cf9ed8432abbaf0ccdf746ba5d06294370c09dbc59dcc7406b818338f5e1",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "schemas/reasoning-report-profile.v1.json",
+      "sha256": "c79aecb4e6ab7b8ec16495eea29df7a74e5b3d378e9706241ac432a2029a959a",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "templates/apivr-completion-report.envelope.json",
+      "sha256": "9f6d07287c50154b305adf79e86232407f91876af61b49d831bd303a256a47dc",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "templates/repair-failed-report.envelope.json",
+      "sha256": "40e1c3c6cd0cec1f3d8a455f14e50ae6896625bea95c388cdc7d9132156b9333",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "templates/reasoning-request.envelope.json",
+      "sha256": "2dafc62b2a1a3750f5284d529ea478437d25be07c861baf30352877f18e90196",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "templates/inbound/scout-report.envelope.fixture.json",
+      "sha256": "359cf6d5b6c467fdbd5d305e55aeed5f900a99feac19a9a658cc10fe6bc44555",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "templates/inbound/spec.envelope.fixture.json",
+      "sha256": "59c3d93390fa75a9ba229c69e7c4e6be537014eeba747c3d6c2e1cb6b10e281f",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "templates/inbound/root-cause-report.envelope.fixture.json",
+      "sha256": "c9fcb48159ede76e99d1411571d86d97ad2b9fb4398555c1ec56f439e70369b1",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "templates/inbound/reasoning-report.envelope.fixture.json",
+      "sha256": "0b095c74802c3a4efd66d46ca695355494be0066078511c4fdbdf85b9b6916e1",
+      "role": "template",
+      "mode": "created"
+    }
+  ],
+  "handoffs_declared": {
+    "upstream": [],
+    "downstream": [
+      "idg"
+    ]
+  },
+  "token_budget": {
+    "entry": 805,
+    "working_set_target": 1000
+  },
+  "comm": {
+    "envelope_version": "1.0",
+    "emits": [
+      "apivr-completion-report",
+      "repair-failed-report",
+      "reasoning-request"
+    ],
+    "verifies_incoming": [
+      "scout-report",
+      "spec",
+      "root-cause-report",
+      "reasoning-report"
+    ]
+  },
+  "security": {
+    "reads_repo": true,
+    "reads_network": false,
+    "writes_repo": true,
+    "persists": [
+      ".eidolons/apivr/memories/"
+    ]
+  }
+}

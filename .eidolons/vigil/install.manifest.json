@@ -1,0 +1,273 @@
+{
+  "eidolon": "vigil",
+  "version": "1.1.3",
+  "methodology": "VIGIL",
+  "installed_at": "2026-05-16T23:31:02Z",
+  "target": "./.eidolons/vigil",
+  "hosts_wired": [
+    "claude-code",
+    "copilot"
+  ],
+  "files_written": [
+    {
+      "path": "./.eidolons/vigil/agent.md",
+      "sha256": "782c20ea588b7af1225b9b634001ca2bc28909d9d7bd2160585987bde237cabe",
+      "role": "entry-point",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/VIGIL.md",
+      "sha256": "40da75dfb6902a15202d72c8b3b8ee4d011b951ae9c7dacc9c24efcb4836598b",
+      "role": "spec",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/AGENTS.md",
+      "sha256": "50a77bfacb698a9dec4540f618b35b9433feec57b19868241472209104dc7521",
+      "role": "entry-point",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/CLAUDE.md",
+      "sha256": "a9217b79ce5928aaa72c6de22665da65fa35b8b1e568f5d9f678462030a5bcc3",
+      "role": "dispatch",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/DESIGN-RATIONALE.md",
+      "sha256": "a51050e2859aa8c275d94e1b6f08e9cbf072eaa2fe7e91898455c58b0d7b6a59",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/README.md",
+      "sha256": "d9dee33c468829197e2fe16cdd8f4c1f4e0b75695ec25c778bd89b823e497f55",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/CHANGELOG.md",
+      "sha256": "1bd9122184547125d0b25570bb9bd96c1748c9bc4865536b75345741a5e85e2f",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/ECL_VERSION",
+      "sha256": "d526eb4e878a23ef26ae190031b4efd2d58ed66789ac049ea3dbaf74c9df7402",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/skills/verify/SKILL.md",
+      "sha256": "ad9e6373237e675167a292c165037fb1832a6343f4dd63c1fa7d9e97a37ae111",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/skills/isolate/SKILL.md",
+      "sha256": "386a15026ae6e5110a6e7bd1e6d61b8c8ce527138dc60608dc04807ec1706511",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/skills/graph/SKILL.md",
+      "sha256": "ff9868c3ec31665cac11e93353f85588460722ca6723794e4ab65db1abf61f81",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/skills/intervene/SKILL.md",
+      "sha256": "c552411e92219ec9d8040bf2b7207ee3b44563cab72ebafb7d6704b9720aee87",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/skills/learn/SKILL.md",
+      "sha256": "d30f4f6a1dbaced811eef93eda348ae15c3621029431fdb4df1c5d7cc230b121",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/templates/root-cause-report.md",
+      "sha256": "fe35388053eec44172be8b74c7f884aa074a27719a7e153931b4a4d780b4913b",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/templates/verified-patch.md",
+      "sha256": "c3107fda87ccbc833e45aac1fc2194f14f1c0f3e31dff9147e2210571a364f53",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/templates/failure-signature.md",
+      "sha256": "1f24da8c9cd2e703374a8291492ec2fb45e2b02aeb4d11c540c6fe36e4132f05",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/templates/escalation-brief.md",
+      "sha256": "cb01d79ca13dff4d551f59b50d5baa1c1d870111c53be6478ad5ba67cdc85571",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/templates/root-cause-report.envelope.json",
+      "sha256": "47c4accf333c38eb2a45b55672c5ea46167d19e4eaf7f33341ffd55c999bfa05",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/templates/escalation-brief.envelope.json",
+      "sha256": "5c4e54e9ecd06ce57b844655f4d3030dc18b566560dbdc838e27e0a16fce022e",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/schemas/reproduction.v1.json",
+      "sha256": "6164bd2a9917b8da08b5fd1cfe7dc05f9ca44876d07b6c4319cd48baf97b8718",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/schemas/intervention-log.v1.json",
+      "sha256": "c0bed91294518207c63c257621dc6d85abdc99275319714100de5fa0c2a5664a",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/schemas/root-cause-report.v1.json",
+      "sha256": "839d07dc19c4e981236223182d28bc82fd7be347a970f7961da2875610461ca0",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/schemas/ecl/envelope.v1.json",
+      "sha256": "4ff9934aa16cc9150a05760153e34a521ed7967e4dade210b4c2b8809051dce9",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/schemas/ecl/_base-profile.v1.json",
+      "sha256": "71748afa4a03dcc692a6625fc05a528f0b8dd06e61db38c5bcb029f3cda17718",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/schemas/ecl/root-cause-report.v1.json",
+      "sha256": "4b6f434892ec7926e3fdaf633206d4c7e136e09563e6952a5409306ca017ba37",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/schemas/ecl/contracts/vigil-to-apivr.yaml",
+      "sha256": "a927008a752c8f317029b9d1b87bda09969159650c2ecbbf85bf79db69e3cc4d",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/schemas/ecl/contracts/vigil-to-spectra.yaml",
+      "sha256": "73ab50fd02f616671d023b0c24c9ad3cab1ff812318a1d436a5be09725518f93",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/schemas/ecl/contracts/vigil-to-idg.yaml",
+      "sha256": "a50a20dcbd96b91eb6d1e255d1291d777dc97ccb6138a02a495d513f0064850b",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/schemas/ecl/contracts/apivr-to-vigil.yaml",
+      "sha256": "32c4119c35b4514d9756c584e99de577b1752f99f99153b6dd2c4879767fe78f",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/hosts/claude-code.md",
+      "sha256": "80da868d991fe659472e39dbb66e3876d2b403fb4f2ec3872162eb594e47cb64",
+      "role": "dispatch",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/hosts/cursor.md",
+      "sha256": "883eeaa6cf8e03ca088680051f15e6bccb49111ef9db9802f7c62bd40cb2928d",
+      "role": "dispatch",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/hosts/copilot.md",
+      "sha256": "846efc54f3e4091fd40b65a19112f19b68a9ec546f5cda8203b414c71144f791",
+      "role": "dispatch",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/hosts/opencode.md",
+      "sha256": "4147ec1ab430801e383f11d98b57905997c81ca6b8cd08b7ec21bc12906facc7",
+      "role": "dispatch",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/vigil/evals/canary/missions.md",
+      "sha256": "298eab5e70db2b14b1564d9788861126544a66b46e4074af845431062e08843a",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "0917be1bdfe12b5020b7025b00bb3babf4f5905face16b9ad0d32d528f49994e",
+      "role": "dispatch",
+      "mode": "appended"
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "5b683bc0721e73e8acaca95488f4faed93f4bd7fe2d31c1009d1d80b4ca18674",
+      "role": "dispatch",
+      "mode": "appended"
+    },
+    {
+      "path": ".claude/agents/vigil.md",
+      "sha256": "f8ba78f57808ecdcaa2c167beea8025f04a2c3a28b4f79ff6812722414aedd14",
+      "role": "dispatch",
+      "mode": "created"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "sha256": "a8132d71ec512787765dcb97e4efeef14112b1cc4d913adddecc16b26b6f737f",
+      "role": "dispatch",
+      "mode": "appended"
+    }
+  ],
+  "handoffs_declared": {
+    "upstream": [],
+    "downstream": [
+      "apivr",
+      "spectra",
+      "idg",
+      "forge"
+    ]
+  },
+  "token_budget": {
+    "entry": 933,
+    "working_set_target": 3500
+  },
+  "security": {
+    "reads_repo": true,
+    "reads_network": false,
+    "writes_repo": false,
+    "persists": [
+      ".vigil/config.yml",
+      "memories/vigil-failures.yaml"
+    ]
+  },
+  "comm": {
+    "envelope_version": "1.0",
+    "emits": [
+      "root-cause-report",
+      "escalation-brief"
+    ],
+    "consumes": [
+      "repair-failed-report"
+    ]
+  }
+}

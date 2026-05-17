@@ -1,0 +1,144 @@
+{
+  "eidolon": "spectra",
+  "version": "4.3.3",
+  "methodology": "SPECTRA",
+  "installed_at": "2026-05-16T23:30:55Z",
+  "target": "./.eidolons/spectra",
+  "ecl_version_emitted": "2.0",
+  "hosts_wired": [
+    "claude-code",
+    "copilot"
+  ],
+  "files_written": [
+    {
+      "path": "./.eidolons/spectra/agent.md",
+      "sha256": "dfb477fcb9d9d096b0dd582a84a4d8e387b02c42f78ff9eb29567a7c04204c09",
+      "role": "entry-point",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/SPECTRA.md",
+      "sha256": "04b5a381630a33b78c7a658bd176f810d24ee987b10d135ac2d5a32e0a5af57d",
+      "role": "spec",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/scoring.md",
+      "sha256": "28f56f3f5e3d1c99d732edcfb8b4e141d5b513ea8d8af33a0abdb2825806734e",
+      "role": "spec",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/templates.md",
+      "sha256": "be118b6ac6c88e1183eba4fa13d2cce6008f6bf565f594a7d0a82ab08945e06a",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/templates/planning-artifact.md",
+      "sha256": "87b3810ba2d0d12e21422fe8273983512f4de93cb5865835412269bc1540a0c2",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/ECL_VERSION",
+      "sha256": "d526eb4e878a23ef26ae190031b4efd2d58ed66789ac049ea3dbaf74c9df7402",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/schemas/spec-profile.v1.json",
+      "sha256": "0df28d948de1881db779d6220389fdefab7c0e659d4f3de7d1921c54019f0aed",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/schemas/ecl-envelope.v1.json",
+      "sha256": "18dad214bd6661ac424fd30953ebe51d20d29067af8d8ef987a54abe636dc21a",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/templates/spec.envelope.json",
+      "sha256": "7d999e675900f245a67d597bdd369621a6d57cfa367e2b022e3bd6fcc97a357d",
+      "role": "template",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/skills",
+      "sha256": "",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/research",
+      "sha256": "",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/tools",
+      "sha256": "",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": "./.eidolons/spectra/commands",
+      "sha256": "",
+      "role": "other",
+      "mode": "created"
+    },
+    {
+      "path": ".claude/skills/spectra-planning/SKILL.md",
+      "sha256": "92919b04f5c4e40f155a4fb8239a9818286c8dc01b0aecb5b95025f8d7a44de2",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": ".github/instructions/spectra-planning.instructions.md",
+      "sha256": "0c57acbb00a913f546564dc10847d95f3df0e9d39d478d53a71f60c5a88663ba",
+      "role": "skill",
+      "mode": "created"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "5deff23d0e6aae30480c61de905f66cd06904ff31f95a406d070851ddc4e20a3",
+      "role": "dispatch",
+      "mode": "appended"
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "0437e18a4d5ff9f1e377f2b5fb39058b1bbcd52a907297b34d444042e49eed21",
+      "role": "dispatch",
+      "mode": "appended"
+    },
+    {
+      "path": ".claude/agents/spectra.md",
+      "sha256": "04e8695ce0415068366b363dd6f863ef6ba37ece918febb08805c597e5cd335c",
+      "role": "dispatch",
+      "mode": "created"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "sha256": "9d274bc1a81f68b8cb7d248c74605a5e38fb435134592a21423ec1c9a3be9254",
+      "role": "dispatch",
+      "mode": "appended"
+    }
+  ],
+  "handoffs_declared": {
+    "upstream": [],
+    "downstream": []
+  },
+  "token_budget": {
+    "entry": 480,
+    "working_set_target": 1000
+  },
+  "security": {
+    "reads_repo": true,
+    "reads_network": false,
+    "writes_repo": true,
+    "persists": [
+      "./.eidolons/spectra/"
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "atlas-aci": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--read-only",
+        "--name",
+        "atlas-aci-termaup",
+        "--label",
+        "eidolons.project=termaup",
+        "-v",
+        "/Users/henrique/workspace/oss/termaup:/repo:ro",
+        "-v",
+        "/Users/henrique/workspace/oss/termaup/.atlas/memex:/memex",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "ghcr.io/rynaro/atlas-aci@sha256:386677f06b0ce23cb4883f6c0f91d8eac22328cd7d9451ae241e2f183207ad96",
+        "serve",
+        "--repo",
+        "/repo",
+        "--memex-root",
+        "/memex"
+      ]
+    }
+  }
+}
